@@ -61,9 +61,10 @@ cargo build --release
 ./uplink client 127.0.0.1:8080
 ```
 
-### Disable shell
+### Disable execution of commands by peers
 ```bash
 ./uplink client 127.0.0.1:8000 --no-exec
+./uplink server 127.0.0.1:8000 --no-exec
 ```
 
 ### Using Precompiled Parameters
