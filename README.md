@@ -1,3 +1,6 @@
+<img src="https://raw.githubusercontent.com/krystianbajno/krystianbajno/main/img/uplink.png"/>
+
+
 # UPLINK
 
 UPLINK is an AES-GCM encrypted communication tool that leverages **WebSockets** for secure, and bi-directional communication between a client and a server. It supports **command execution**, **file transfers** (upload/download).
