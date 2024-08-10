@@ -1,0 +1,15 @@
+[package]
+name = "uplink"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aes-gcm = "0.10.3"          # For AES-GCM encryption
+sha2 = "0.10"             # For SHA-256 hashing
+hkdf = "0.12.4"             # For HKDF key derivation
+rand = "0.8"              # For random number generation
+generic-array = "1.1.0"   # For GenericArray handling
+flate2 = "1.0"            # For compression and decompression
+tokio = { version = "1", features = ["full"] }  # Asynchronous runtime
+futures-util = "0.3"      # For futures utilities
+tokio-tungstenite = "0.23.1" # For WebSocket support

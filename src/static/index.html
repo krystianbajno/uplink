@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPLINK Management</title>
+    <script>
+        let socket;
+        let passphrase = '';
+        let previousPassphrase = '';
+
+        function connect() {
+            const url = new URL(window.location.href);
+            const wsProtocol = (url.protocol === 'https:') ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${url.hostname}:${url.port || '8080'}`;
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onmessage = async function(event) {
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const encryptedData = new Uint8Array(reader.result);
+                    const decryptedData = await decryptData(encryptedData);
+                    const output = new TextDecoder().decode(decryptedData);
+                    document.getElementById('output').innerText = output;
+                };
+                reader.readAsArrayBuffer(event.data);
+            };
+
+            socket.onopen = function() {
+                document.getElementById('status').innerText = "Connected";
+                fetchFiles();
+            };
+
+            socket.onclose = function() {
+                document.getElementById('status').innerText = "Disconnected";
+            };
+        }
+
+        function fetchFiles() {
+            const command = "LIST";
+            sendCommand(command);
+        }
+
+        function sendCommand(command) {
+            encryptData(new TextEncoder().encode(command)).then(encryptedCommand => {
+                socket.send(encryptedCommand);
+            });
+        }
+
+        function downloadFile(filename) {
+            const command = `GET ${filename}`;
+            sendCommand(command);
+
+            socket.onmessage = async function(event) {
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const encryptedData = new Uint8Array(reader.result);
+                    const decryptedData = await decryptData(encryptedData);
+                    const blob = new Blob([decryptedData], { type: "application/octet-stream" });
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                };
+                reader.readAsArrayBuffer(event.data);
+            };
+        }
+
+        function uploadFile() {
+            const fileInput = document.getElementById("fileInput");
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const binaryData = new Uint8Array(event.target.result);
+                    compressData(binaryData).then(compressedData => {
+                        encryptData(compressedData).then(encryptedData => {
+                            socket.send(new Blob([`PUT ${file.name} `, encryptedData]));
+                        });
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        async function compressData(data) {
+            const compressedData = pako.gzip(data);
+            return compressedData;
+        }
+
+        async function encryptData(data) {
+            const key = await crypto.subtle.importKey(
+                "raw",
+                new TextEncoder().encode(passphrase),
+                { name: "AES-GCM" },
+                false,
+                ["encrypt"]
+            );
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encryptedData = await crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                data
+            );
+            const combinedData = new Uint8Array(iv.length + encryptedData.byteLength);
+            combinedData.set(iv, 0);
+            combinedData.set(new Uint8Array(encryptedData), iv.length);
+            return combinedData;
+        }
+
+        async function decryptData(data) {
+            const iv = data.slice(0, 12);
+            const encrypted = data.slice(12);
+            const key = await crypto.subtle.importKey(
+                "raw",
+                new TextEncoder().encode(passphrase),
+                { name: "AES-GCM" },
+                false,
+                ["decrypt"]
+            );
+            const decryptedData = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                encrypted
+            );
+            return new Uint8Array(decryptedData);
+        }
+
+        function updatePassphrase() {
+            const newPassphrase = document.getElementById('passphrase').value;
+            if (passphrase) {
+                // Only issue PASSPHRASE command if a previous passphrase existed
+                const command = `PASSPHRASE ${newPassphrase}`;
+                sendCommand(command);
+            }
+            previousPassphrase = passphrase;
+            passphrase = newPassphrase;
+        }
+
+        function handleUserInput() {
+            const command = document.getElementById('commandInput').value;
+            sendCommand(command);
+            document.getElementById('commandInput').value = '';
+        }
+    </script>
+</head>
+<body onload="connect()">
+    <h1>UPLINK Management</h1>
+    <p>Status: <span id="status">Connecting...</span></p>
+    <input type="text" id="passphrase" placeholder="Enter passphrase" oninput="updatePassphrase()">
+    <br><br>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload</button>
+    <br><br>
+    <input type="text" id="commandInput" placeholder="Enter command">
+    <button onclick="handleUserInput()">Send Command</button>
+    <div>
+        <h2>Output:</h2>
+        <pre id="output"></pre>
+    </div>
+</body>
+</html>
