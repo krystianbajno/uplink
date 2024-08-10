@@ -5,8 +5,9 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
-use crate::communication;
+use crate::{communication, response_handler};
 use crate::command::{Command as NodeCommand, Response};
+use indoc::indoc;
 
 pub struct TxCommandHandler {
     passphrase: String,
@@ -36,8 +37,39 @@ impl TxCommandHandler {
         let args = &parts[1..].join(" ");
 
         let node_command = match cmd.to_uppercase().as_str() {
+            "H" | "HELP" => {
+                let help = indoc!{"
+                    [UPLINK HELP]:
+
+                    H - Print help
+                    ECHO | PRINT | MSG - Send a message to connected node.
+
+                    GET | DOWNLOAD <remote> <local> - Download a file or directory.
+                    PUT | UPLOAD <local> <remote> - Upload a file or directory.
+                    LIST | LS | DIR - List files in the directory.
+
+                    SHELL | EXEC | RUN | CMD <command> - Execute a shell command on the connected node.
+                    
+                    ID | WHOAMI | WHO | W - Get current user
+                    PWD | WHERE - Get current directory path
+                    USERS - Get users on the system
+                    NETSTAT - Get network connections
+                    N | NETWORK | IFCONFIG | IPCONFIG - Get network adapter configuration
+                    SYSTEM | INFO | SYSTEMINFO | UNAME - Get system configuration
+
+                    PASSPHRASE - Change the encryption passphrase.
+                "};
+                println!("{}", help);
+                return;
+            }
             "ECHO" | "PRINT" | "MSG" => NodeCommand::Echo { message: args.to_string() },
-            "LIST" | "LS" => NodeCommand::ListFiles,
+            "LIST" | "LS" | "DIR" => NodeCommand::ListFiles,
+            "ID" | "WHOAMI" | "WHO" | "W" => NodeCommand::Whoami,
+            "PWD" | "WHERE" => NodeCommand::Pwd,
+            "USERS"  => NodeCommand::Users,
+            "NETSTAT" => NodeCommand::Netstat,
+            "N" | "NETWORK" | "IFCONFIG" | "IPCONFIG" => NodeCommand::Network,
+            "SYSTEM" | "INFO" | "SYSTEMINFO" | "UNAME" => NodeCommand::Info,
             "GET" | "DOWNLOAD" => { 
                 let arg_parts: Vec<&str> = args.splitn(2, ' ').collect();
 
@@ -97,7 +129,7 @@ impl TxCommandHandler {
                             Ok(Message::Binary(data)) => {
                                 let decrypted_data = communication::prepare_rx(data, &passphrase);
                                 let response: Response = serde_json::from_slice(&decrypted_data).expect("Failed to deserialize response");
-                                Self::process_response(response).await;
+                                response_handler::process_response(response).await;
                             }
                             Ok(_) => eprintln!("Received unexpected non-binary message"),
                             Err(e) => {
@@ -111,21 +143,5 @@ impl TxCommandHandler {
         });
     }
 
-    async fn process_response(response: Response) {
-        match response {
-            Response::Message { content } => println!("Received message: {}", content),
-            Response::FileList { files } => {
-                for file in files {
-                    println!("- {}", file);
-                }
-            }
-            Response::FileData { file_path, data } => {
-                println!("{:?} {:?}", file_path, data);
-                if let Err(e) = fs::write(&file_path, data).await {
-                    eprintln!("Failed to write file {}: {}", file_path, e);
-                }
-            }
-            Response::CommandOutput { output } => println!("Command output: {}", output),
-        }
-    }
+
 }

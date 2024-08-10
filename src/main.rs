@@ -1,6 +1,7 @@
 mod rx_command_handler;
 mod tx_command_handler;
 
+mod response_handler;
 mod command;
 mod communication;
 mod crypto;
@@ -82,7 +83,6 @@ async fn start_client(address: &str, passphrase: Arc<String>) {
     });
 
     loop {
-        // Keep the connection alive, handle any potential pings or keep-alive logic here.
         tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
     }
 }
