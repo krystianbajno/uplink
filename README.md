@@ -30,8 +30,10 @@ cargo build --release
 ```
 ./uplink --connect 127.0.0.1:8080
 ```
-### P2P
-
+### Disable code execution
+```
+./uplink --listen 127.0.0.1:8080 --no-code-exec
+```
 ### Web Interface
 The UPLINK server also hosts a web interface that can be accessed via a browser:
 
