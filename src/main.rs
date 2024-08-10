@@ -17,17 +17,55 @@ use tx_command_handler::TxCommandHandler;
 
 #[tokio::main]
 async fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let mode = &args[1];
-    let address = &args[2];
+    let (mode, address, passphrase) = get_config();
 
-    let passphrase = Arc::new(std::env::var("PASSPHRASE").unwrap_or_else(|_| "default_passphrase".to_string()));
+    let passphrase = Arc::new(passphrase);
 
     match mode.as_str() {
-        "server" => start_server(address, Arc::clone(&passphrase)).await,
-        "client" => start_client(address, Arc::clone(&passphrase)).await,
+        "server" => start_server(&address, Arc::clone(&passphrase)).await,
+        "client" => start_client(&address, Arc::clone(&passphrase)).await,
         _ => eprintln!("Invalid mode. Use 'server' or 'client'"),
     }
+}
+
+fn get_config() -> (String, String, String) {
+    #[cfg(feature = "precompiled_mode")]
+    let mode = env!("CARGO_PKG_METADATA_PRECOMPILED_MODE").to_string();
+
+    #[cfg(feature = "precompiled_address")]
+    let address = env!("CARGO_PKG_METADATA_PRECOMPILED_ADDRESS").to_string();
+
+    #[cfg(feature = "precompiled_passphrase")]
+    let passphrase = env!("CARGO_PKG_METADATA_PRECOMPILED_PASSPHRASE").to_string();
+
+    #[cfg(not(feature = "precompiled_mode"))]
+    let mode = {
+        let args: Vec<String> = std::env::args().collect();
+        if args.len() > 1 {
+            args[1].clone()
+        } else {
+            eprintln!("Usage: <mode> <address>");
+            std::process::exit(1);
+        }
+    };
+
+    #[cfg(not(feature = "precompiled_address"))]
+    let address = {
+        let args: Vec<String> = std::env::args().collect();
+        if args.len() > 2 {
+            args[2].clone()
+        } else {
+            eprintln!("Usage: <mode> <address>");
+            std::process::exit(1);
+        }
+    };
+
+    #[cfg(not(feature = "precompiled_passphrase"))]
+    let passphrase = {
+        std::env::var("PASSPHRASE").unwrap_or_else(|_| "default_passphrase".to_string())
+    };
+
+    (mode, address, passphrase)
 }
 
 async fn start_client(address: &str, passphrase: Arc<String>) {

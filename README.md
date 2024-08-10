@@ -34,8 +34,14 @@ cargo build --release
 ```
 ./uplink --listen 127.0.0.1:8080 --no-code-exec
 ```
-### Use precompiled listen or connect parameter
+### Use precompiled parameters
 ```
+`Cargo.toml`
+[package.metadata]
+precompiled_mode = { value = "\"server\"" }  # Change as needed
+precompiled_address = { value = "\"127.0.0.1:8080\"" }  # Change as needed
+precompiled_passphrase = { value = "\"my_precompiled_passphrase\"" }  # Change as needed
+
 ./uplink
 ```
 

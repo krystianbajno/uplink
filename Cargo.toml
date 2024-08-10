@@ -14,3 +14,13 @@ tokio = { version = "1", features = ["full"] }  # Asynchronous runtime
 futures-util = "0.3"      # For futures utilities
 tokio-tungstenite = "0.23.1" # For WebSocket support
 url = "2.2" 
+
+[features]
+precompiled_mode = []
+precompiled_address = []
+precompiled_passphrase = []
+
+[package.metadata]
+precompiled_mode = { value = "\"server\"" }  # Change as needed
+precompiled_address = { value = "\"127.0.0.1:8080\"" }  # Change as needed
+precompiled_passphrase = { value = "\"my_precompiled_passphrase\"" }  # Change as needed
