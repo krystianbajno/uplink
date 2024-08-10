@@ -23,6 +23,27 @@ cd uplink
 cargo build --release
 ```
 
+### Command Reference
+```bash
+H - Print help
+ECHO | PRINT | MSG - Send a message to connected node.
+
+GET | DOWNLOAD <remote> <local> - Download a file or directory.
+PUT | UPLOAD <local> <remote> - Upload a file or directory.
+LIST | LS | DIR - List files in the directory.
+
+SHELL | EXEC | RUN | CMD <command> - Execute a shell command on the connected node.
+
+ID | WHOAMI | WHO | W - Get current user
+PWD | WHERE - Get current directory path
+USERS - Get users on the system
+NETSTAT - Get network connections
+N | NETWORK | IFCONFIG | IPCONFIG - Get network adapter configuration
+SYSTEM | INFO | SYSTEMINFO | UNAME - Get system configuration
+
+PASSPHRASE - Change the encryption passphrase.
+```
+
 ## Usage
 ### Starting the Server
 ```
@@ -79,27 +100,6 @@ The UPLINK server also hosts a web interface that can be accessed via a browser:
   - Use the file input to select a file and click "Upload" to securely transfer the file to the server.
 - **Change Passphrase:**
   - Update the passphrase by entering a new value in the passphrase field, which will synchronize the passphrase across connected nodes.
-
-### Command Reference
-```bash
-H - Print help
-ECHO | PRINT | MSG - Send a message to connected node.
-
-GET | DOWNLOAD <remote> <local> - Download a file or directory.
-PUT | UPLOAD <local> <remote> - Upload a file or directory.
-LIST | LS | DIR - List files in the directory.
-
-SHELL | EXEC | RUN | CMD <command> - Execute a shell command on the connected node.
-
-ID | WHOAMI | WHO | W - Get current user
-PWD | WHERE - Get current directory path
-USERS - Get users on the system
-NETSTAT - Get network connections
-N | NETWORK | IFCONFIG | IPCONFIG - Get network adapter configuration
-SYSTEM | INFO | SYSTEMINFO | UNAME - Get system configuration
-
-PASSPHRASE - Change the encryption passphrase.
-```
 
 ### Example Usage
 

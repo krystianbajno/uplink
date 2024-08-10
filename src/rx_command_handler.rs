@@ -10,7 +10,7 @@ use tokio_tungstenite::WebSocketStream;
 use crate::communication;
 use crate::command::{Command as NodeCommand, Response};
 use crate::response_handler;
-use users::{all_users};
+use users::all_users;
 
 pub struct RxCommandHandler {
     passphrase: String,
