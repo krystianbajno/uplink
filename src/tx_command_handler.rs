@@ -1,12 +1,11 @@
 use std::sync::Arc;
-use futures_util::stream::{SplitSink, SplitStream};
+use futures_util::stream::{SplitSink, SplitStream, StreamExt};
 use tokio::fs;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use crate::communication;
-use crate::crypto;
 use crate::command::{Command as NodeCommand, Response};
 use crate::compression;
 
@@ -34,11 +33,13 @@ impl TxCommandHandler {
             "ECHO" | "PRINT" | "MSG" => NodeCommand::Echo { message: args.to_string() },
             "LIST" | "LS" => NodeCommand::ListFiles,
             "GET" | "DOWNLOAD" => NodeCommand::GetFile { file_path: args.to_string() },
-            "PUT" | "UPLOAD" => NodeCommand::PutFile { file_path: args.to_string(), data: vec![] },
+            "PUT" | "UPLOAD" => {
+                let file_path = args.to_string();
+                let data = fs::read(&file_path).await.unwrap_or_else(|_| vec![]);
+                NodeCommand::PutFile { file_path, data }
+            }
             "SHELL" | "EXEC" | "RUN" => NodeCommand::Execute { command: args.to_string() },
             "PASSPHRASE" => NodeCommand::ChangePassphrase { new_passphrase: args.to_string() },
-            "PROXY" => NodeCommand::ProxyToServer { server_address: args.to_string() },
-            "EXIT" => NodeCommand::ExitProxyMode,
             _ => {
                 eprintln!("Unknown command: {}", command);
                 return;
@@ -51,22 +52,23 @@ impl TxCommandHandler {
 
     async fn send_command(&self, command: NodeCommand) {
         let serialized_command = serde_json::to_vec(&command).expect("Failed to serialize command");
-        let encrypted_command = crypto::encrypt(&serialized_command, self.passphrase.as_bytes());
+        let encrypted_command = communication::prepare_tx(serialized_command, &self.passphrase);
 
         if let Some(ws_sender) = &self.ws_sender {
-            communication::send_binary_data(ws_sender, encrypted_command).await;
+            let mut sender = ws_sender.lock().await;
+            communication::send_binary_data(&mut sender, encrypted_command).await;
         }
     }
 
     async fn wait_for_response(&mut self) {
-        if let Some(ws_receiver) = &mut self.ws_receiver {
+        if let Some(ws_receiver) = &self.ws_receiver {
             while let Some(message) = ws_receiver.lock().await.next().await {
                 match message {
                     Ok(Message::Binary(data)) => {
-                        let decrypted_data = crypto::decrypt(&data, self.passphrase.as_bytes());
+                        let decrypted_data = communication::prepare_rx(data, &self.passphrase);
                         let response: Response = serde_json::from_slice(&decrypted_data).expect("Failed to deserialize response");
                         self.process_response(response).await;
-                        break; // Exit after handling the response
+                        break;
                     }
                     Ok(_) => eprintln!("Received unexpected non-binary message"),
                     Err(e) => {

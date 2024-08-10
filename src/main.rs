@@ -6,8 +6,6 @@ mod communication;
 mod crypto;
 mod compression;
 
-mod file_operations;
-
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, client_async};
 use futures_util::stream::StreamExt;
@@ -105,6 +103,11 @@ async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
     println!("Server listening on {}", bind_addr);
 
     while let Ok((stream, _)) = listener.accept().await {
+        if communication::is_http_request(&stream).await {
+            communication::handle_http_request(stream).await;
+            continue;
+        }
+
         let ws_stream = accept_async(stream)
             .await
             .expect("Error during WebSocket handshake");

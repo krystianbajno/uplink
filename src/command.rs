@@ -8,8 +8,6 @@ pub enum Command {
     PutFile { file_path: String, data: Vec<u8> },
     Execute { command: String },
     ChangePassphrase { new_passphrase: String },
-    ProxyToServer { server_address: String },
-    ExitProxyMode,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
