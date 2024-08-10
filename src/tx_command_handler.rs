@@ -38,7 +38,19 @@ impl TxCommandHandler {
         let node_command = match cmd.to_uppercase().as_str() {
             "ECHO" | "PRINT" | "MSG" => NodeCommand::Echo { message: args.to_string() },
             "LIST" | "LS" => NodeCommand::ListFiles,
-            "GET" | "DOWNLOAD" => NodeCommand::GetFile { file_path: args.to_string() },
+            "GET" | "DOWNLOAD" => { 
+                let arg_parts: Vec<&str> = args.splitn(2, ' ').collect();
+
+                if arg_parts.len() < 2 {
+                    eprintln!("GET/DOWNLOAD command requires both file path and local path.");
+                    return;
+                }
+
+                let file_path = arg_parts[0].to_string();
+                let file_local_path = arg_parts[1].to_string();
+
+                NodeCommand::GetFile { file_path, file_local_path }
+            },
             "PUT" | "UPLOAD" => {
                 let arg_parts: Vec<&str> = args.splitn(2, ' ').collect();
 
@@ -108,6 +120,7 @@ impl TxCommandHandler {
                 }
             }
             Response::FileData { file_path, data } => {
+                println!("{:?} {:?}", file_path, data);
                 if let Err(e) = fs::write(&file_path, data).await {
                     eprintln!("Failed to write file {}: {}", file_path, e);
                 }

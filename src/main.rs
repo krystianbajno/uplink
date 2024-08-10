@@ -17,7 +17,7 @@ use tx_command_handler::TxCommandHandler;
 #[tokio::main]
 async fn main() {
     let (mode, address, passphrase) = get_config();
-    let passphrase = Arc::new(passphrase);
+    let passphrase: Arc<String> = Arc::new(passphrase);
 
     match mode.as_str() {
         "server" => start_server(&address, Arc::clone(&passphrase)).await,

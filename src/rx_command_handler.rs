@@ -28,7 +28,7 @@ impl RxCommandHandler {
         match command {
             NodeCommand::Echo { message } => self.echo_message(&message).await,
             NodeCommand::ListFiles => self.list_files().await,
-            NodeCommand::GetFile { file_path } => self.download_file(&file_path).await,
+            NodeCommand::GetFile { file_path, file_local_path } => self.download_file(&file_path, &file_local_path).await,
             NodeCommand::PutFile { file_path, file_up_path, data } => self.upload_file(&file_path, &file_up_path, &data).await,
             NodeCommand::Execute { command } => self.execute_command(&command).await,
             NodeCommand::ChangePassphrase { new_passphrase } => self.change_passphrase(&new_passphrase).await,
@@ -59,10 +59,10 @@ impl RxCommandHandler {
         Response::FileList { files: file_list }
     }
 
-    async fn download_file(&self, file_path: &str) -> Response {
+    async fn download_file(&self, file_path: &str, file_local_path: &str) -> Response {
         match fs::read(file_path).await {
             Ok(file_data) => {
-                Response::FileData { file_path: file_path.to_string(), data: file_data }
+                Response::FileData { file_path: file_local_path.to_string(), data: file_data }
             }
             Err(e) => {
                 eprintln!("Failed to read file {}: {}", file_path, e);

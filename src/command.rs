@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 pub enum Command {
     Echo { message: String },
     ListFiles,
-    GetFile { file_path: String },
+    GetFile { file_path: String, file_local_path: String },
     PutFile { file_path: String, file_up_path: String, data: Vec<u8> },
     Execute { command: String },
     ChangePassphrase { new_passphrase: String },
