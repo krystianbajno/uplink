@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use futures_util::stream::SplitStream;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
-use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use futures_util::{stream::SplitSink, SinkExt};
@@ -81,7 +80,7 @@ pub async fn handle_cli(command_handler: Arc<Mutex<txch::TxCommandHandler>>) {
     }
 }
 
-pub async fn handle_ws_rx_connection(ws_receiver: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>, command_handler: Arc<Mutex<rxch::RxCommandHandler>>) {
+pub async fn handle_ws_rx_connection(ws_receiver: SplitStream<WebSocketStream<TcpStream>>, command_handler: Arc<Mutex<rxch::RxCommandHandler>>) {
     let mut receiver = ws_receiver;
 
     while let Some(message) = receiver.next().await {

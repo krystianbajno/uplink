@@ -34,6 +34,11 @@ cargo build --release
 ```
 ./uplink --listen 127.0.0.1:8080 --no-code-exec
 ```
+### Use precompiled listen or connect parameter
+```
+./uplink
+```
+
 ### Web Interface
 The UPLINK server also hosts a web interface that can be accessed via a browser:
 

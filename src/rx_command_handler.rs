@@ -11,6 +11,9 @@ use crate::communication;
 use crate::compression;
 use crate::crypto;
 
+/*
+  This is what happens when node receives a command.
+*/
 pub struct RxCommandHandler {
     passphrase: String,
     ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,

