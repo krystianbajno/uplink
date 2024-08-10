@@ -6,7 +6,7 @@
 
 ## Features
 
-- **Bi-Directional Communication**: Both the server and client can issue commands and receive responses, enabling seamless remote management.
+- **Bi-Directional Communication**: Both the server and client can issue commands and receive responses, enabling seamless remote management. Yes, if you connect to the server, the server can execute commands on your computer (you can specify --no-exec flag to disallow that).
 - **Secure File Transfers**: Upload and download files or directories with gzip compression and AES-256-GCM encryption, ensuring data integrity and security.
 - **Remote Command Execution**: Execute shell commands on the remote server or client, providing powerful control over connected systems.
 - **Dynamic Passphrase Management**: Communications are encrypted with AES-256-GCM, with the encryption key derived from a passphrase using HKDF. Passphrases can be updated during runtime, with changes automatically synchronized across all connected nodes.

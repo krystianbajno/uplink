@@ -122,6 +122,10 @@ async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
                         let mut command_handler_for_ws = rx_command_handler.lock().await;
                         command_handler_for_ws.handle_rx().await;
                     });
+
+                    loop {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+                    }
                 }
                 Err(e) => {
                     eprintln!("WebSocket handshake failed: {:?}", e);
