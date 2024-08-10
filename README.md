@@ -55,13 +55,14 @@ PASSPHRASE - Change the encryption passphrase.
 ```
 
 ### Use precompiled parameters
+Modify the parameters in `build.rs` file in order to run default parameters and embed connection instructions inside of binary at compile time.
 ```
-`Cargo.toml`
-[package.metadata]
-precompiled_mode = { value = "\"server\"" }  # Change as needed
-precompiled_address = { value = "\"127.0.0.1:8080\"" }  # Change as needed
-precompiled_passphrase = { value = "\"my_precompiled_passphrase\"" }  # Change as needed
-
+`build.rs`
+fn main() {
+    println!("cargo:rustc-env=CARGO_PKG_METADATA_PRECOMPILED_MODE=server");
+    println!("cargo:rustc-env=CARGO_PKG_METADATA_PRECOMPILED_ADDRESS=127.0.0.1:8080");
+    println!("cargo:rustc-env=CARGO_PKG_METADATA_PRECOMPILED_PASSPHRASE=my_precompiled_passphrase");
+}
 ./uplink
 ```
 
