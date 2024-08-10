@@ -1,6 +1,6 @@
 # UPLINK
 
-UPLINK is an AES-GCM encrypted communication tool that leverages **WebSockets** for secure, and bi-directional communication between a client and a server. It supports **command execution**, **file transfers** (upload/download), and **proxying connections** between nodes.
+UPLINK is an AES-GCM encrypted communication tool that leverages **WebSockets** for secure, and bi-directional communication between a client and a server. It supports **command execution**, **file transfers** (upload/download).
 
 ## Features
 
@@ -8,7 +8,6 @@ UPLINK is an AES-GCM encrypted communication tool that leverages **WebSockets** 
 - **File Transfer:** Upload and download files and directories with gzip compression and AES-256-GCM encryption.
 - **Command Execution:** Execute shell commands on the remote server or client.
 - **Passphrase Protection:** Communication is encrypted with AES-256-GCM and the key is derived from a passphrase using HKDF, and can be changed during runtime.
-- **Proxying:** Proxy connections to other UPLINK servers and relay commands through them.
 - **Web Interface:** A web-based interface allows issuing commands, managing files, and updating the passphrase from a browser.
 
 ## Installation
@@ -89,8 +88,7 @@ The UPLINK server also hosts a web interface that can be accessed via a browser:
 - **PUT x** or **UPLOAD x** - Upload a file or directory.
 - **SHELL x**, **EXEC x**, or **RUN x** - Execute a shell command on the connected node.
 - **PASSPHRASE x** - Change the encryption passphrase.
-- **PROXY x** - Proxy to another UPLINK server. The server will relay commands and responses.
-- **EXIT** - Exit the proxy mode and return to the previous connection. If no parent connection exists, exit the client.
+- **EXIT** - Exit the client.
 
 ### Example Usage
 

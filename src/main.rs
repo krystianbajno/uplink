@@ -1,6 +1,7 @@
 mod rx_command_handler;
 mod tx_command_handler;
 
+mod command;
 mod communication;
 mod crypto;
 mod compression;
@@ -80,17 +81,25 @@ async fn start_client(address: &str, passphrase: Arc<String>) {
     let ws_sender = Arc::new(Mutex::new(ws_sender));
     let ws_receiver = Arc::new(Mutex::new(ws_receiver));
 
-    let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(passphrase.clone().to_string(), Some(Arc::clone(&ws_sender)), Some(Arc::clone(&ws_receiver)))));
-    let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(passphrase.clone().to_string(), Some(Arc::clone(&ws_sender)), Some(Arc::clone(&ws_receiver)))));
+    let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
+        passphrase.clone().to_string(),
+        Some(Arc::clone(&ws_sender)),
+        Some(Arc::clone(&ws_receiver)),
+    )));
+    let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
+        passphrase.clone().to_string(),
+        Some(Arc::clone(&ws_sender)),
+        Some(Arc::clone(&ws_receiver)),
+    )));
 
-    let command_handler_for_cli = Arc::clone(&tx_command_handler);
-    tokio::spawn(communication::handle_cli(command_handler_for_cli));
+    tokio::spawn(communication::handle_cli(Arc::clone(&tx_command_handler)));
 
     tokio::spawn(async move {
         let mut command_handler_for_ws = rx_command_handler.lock().await;
-        command_handler_for_ws.handle_responses().await;
+        command_handler_for_ws.handle_rx().await;
     });
 }
+
 async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
     let listener = TcpListener::bind(bind_addr).await.unwrap();
     println!("Server listening on {}", bind_addr);
@@ -105,15 +114,22 @@ async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
         let ws_sender = Arc::new(Mutex::new(ws_sender));
         let ws_receiver = Arc::new(Mutex::new(ws_receiver));
 
-        let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(passphrase.clone().to_string(), Some(Arc::clone(&ws_sender)), Some(Arc::clone(&ws_receiver)))));
-        let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(passphrase.clone().to_string(), Some(Arc::clone(&ws_sender)), Some(Arc::clone(&ws_receiver)))));
+        let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
+            passphrase.clone().to_string(),
+            Some(Arc::clone(&ws_sender)),
+            Some(Arc::clone(&ws_receiver)),
+        )));
+        let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
+            passphrase.clone().to_string(),
+            Some(Arc::clone(&ws_sender)),
+            Some(Arc::clone(&ws_receiver)),
+        )));
 
-        let command_handler_for_cli = Arc::clone(&tx_command_handler);
-        tokio::spawn(communication::handle_cli(command_handler_for_cli));
+        tokio::spawn(communication::handle_cli(Arc::clone(&tx_command_handler)));
 
         tokio::spawn(async move {
             let mut command_handler_for_ws = rx_command_handler.lock().await;
-            command_handler_for_ws.handle_responses().await;
+            command_handler_for_ws.handle_rx().await;
         });
     }
 }
