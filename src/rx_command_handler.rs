@@ -16,6 +16,7 @@ pub struct RxCommandHandler {
     passphrase: String,
     ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
     ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
+    no_exec: bool
 }
 
 impl RxCommandHandler {
@@ -23,8 +24,9 @@ impl RxCommandHandler {
         passphrase: String,
         ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
         ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
+        no_exec: bool,
     ) -> Self {
-        RxCommandHandler { passphrase, ws_sender, ws_receiver }
+        RxCommandHandler { passphrase, ws_sender, ws_receiver, no_exec }
     }
 
     pub async fn handle_command(&mut self, command: NodeCommand) -> Response {
@@ -127,6 +129,11 @@ impl RxCommandHandler {
     }
 
     async fn execute_command(&self, command: &str) -> Response {
+        if self.no_exec {
+            println!("Execution of commands is disabled (--no-exec flag). Command: {}", command);
+            return Response::Message { content: format!("Peer has disabled executing commands.") }
+        }
+
         let cmd_result = if cfg!(target_os = "windows") {
             Command::new("cmd")
                 .args(&["/C", command])

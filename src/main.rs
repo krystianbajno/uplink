@@ -17,23 +17,22 @@ use tx_command_handler::TxCommandHandler;
 
 #[tokio::main]
 async fn main() {
-    let (mode, address, passphrase) = get_config();
+    let (mode, address, passphrase, no_exec) = get_config();
     let passphrase = Arc::new(passphrase);
 
     match mode.as_deref() {
         Some("server") => {
             let address = address.expect("Address is required for server mode");
-            start_server(&address, Arc::clone(&passphrase)).await;
+            start_server(&address, Arc::clone(&passphrase), no_exec).await;
         }
         Some("client") => {
             let address = address.expect("Address is required for client mode");
-            start_client(&address, Arc::clone(&passphrase)).await;
+            start_client(&address, Arc::clone(&passphrase), no_exec).await;
         }
         _ => eprintln!("Invalid or missing mode. Use 'server' or 'client'"),
     }
 }
-
-fn get_config() -> (Option<String>, Option<String>, String) {
+fn get_config() -> (Option<String>, Option<String>, String, bool) {
     let precompiled_mode: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_MODE");
     let precompiled_address: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_ADDRESS");
     let precompiled_passphrase: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_PASSPHRASE");
@@ -56,10 +55,12 @@ fn get_config() -> (Option<String>, Option<String>, String) {
         })
         .unwrap_or_else(|_| "default_passphrase".to_string());
 
-    (mode, address, passphrase)
+    let no_exec = args.contains(&"--no-exec".to_string());
+
+    (mode, address, passphrase, no_exec)
 }
 
-async fn start_client(address: &str, passphrase: Arc<String>) {
+async fn start_client(address: &str, passphrase: Arc<String>, no_exec: bool) {
     let tcp_stream = TcpStream::connect(address).await.expect("Failed to connect to server");
     let url = format!("ws://{}", address);
     let (ws_stream, _) = client_async(&url, tcp_stream)
@@ -79,6 +80,7 @@ async fn start_client(address: &str, passphrase: Arc<String>) {
         passphrase.clone().to_string(),
         Some(Arc::clone(&ws_sender)),
         Some(Arc::clone(&ws_receiver)),
+        no_exec,
     )));
 
     tokio::spawn(communication::handle_cli(Arc::clone(&tx_command_handler)));
@@ -93,7 +95,7 @@ async fn start_client(address: &str, passphrase: Arc<String>) {
     }
 }
 
-async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
+async fn start_server(bind_addr: &str, passphrase: Arc<String>, no_exec: bool) {
     let listener = TcpListener::bind(bind_addr).await.unwrap();
     println!("Server listening on {}", bind_addr);
 
@@ -114,6 +116,7 @@ async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
                         passphrase.clone().to_string(),
                         Some(Arc::clone(&ws_sender)),
                         Some(Arc::clone(&ws_receiver)),
+                        no_exec,
                     )));
 
                     tokio::spawn(communication::handle_cli(Arc::clone(&tx_command_handler)));
@@ -133,7 +136,6 @@ async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
                 }
             }
         } else {
-            // Handle as an HTTP request
             communication::handle_http_request(stream).await;
         }
     }

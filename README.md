@@ -61,6 +61,11 @@ cargo build --release
 ./uplink client 127.0.0.1:8080
 ```
 
+### Disable shell
+```bash
+./uplink client 127.0.0.1:8000 --no-exec
+```
+
 ### Using Precompiled Parameters
 
 You can preconfigure UPLINK by modifying the parameters in the `build.rs` file. This allows you to embed default connection instructions directly into the binary at compile time:
