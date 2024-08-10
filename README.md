@@ -70,7 +70,7 @@ The UPLINK server also hosts a web interface that can be accessed via a browser:
 
 ### Command Reference
 
-- **ECHO x** or **PRINT x** - Send a message to connected node.
+- **ECHO x** or **PRINT x** or **MSG x** - Send a message to connected node.
 - **LIST** or **LS** - List files in the directory.
 - **GET x** or **DOWNLOAD x** - Download a file or directory.
 - **PUT x** or **UPLOAD x** - Upload a file or directory.
