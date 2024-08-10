@@ -1,6 +1,6 @@
 # UPLINK
 
-UPLINK is a covert communication tool that leverages **WebSockets** for secure, encrypted, and bi-directional communication between a client and a server. It supports **command execution**, **file transfers**, and **proxying connections** between nodes.
+UPLINK is an AES-GCM encrypted communication tool that leverages **WebSockets** for secure, and bi-directional communication between a client and a server. It supports **command execution**, **file transfers** (upload/download), and **proxying connections** between nodes.
 
 ## Features
 
