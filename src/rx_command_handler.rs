@@ -29,7 +29,7 @@ impl RxCommandHandler {
             NodeCommand::Echo { message } => self.echo_message(&message).await,
             NodeCommand::ListFiles => self.list_files().await,
             NodeCommand::GetFile { file_path } => self.download_file(&file_path).await,
-            NodeCommand::PutFile { file_path, data } => self.upload_file(&file_path, &data).await,
+            NodeCommand::PutFile { file_path, file_up_path, data } => self.upload_file(&file_path, &file_up_path, &data).await,
             NodeCommand::Execute { command } => self.execute_command(&command).await,
             NodeCommand::ChangePassphrase { new_passphrase } => self.change_passphrase(&new_passphrase).await,
         }
@@ -71,11 +71,11 @@ impl RxCommandHandler {
         }
     }
 
-    async fn upload_file(&self, file_path: &str, data: &[u8]) -> Response {
-        match fs::write(file_path, data).await {
+    async fn upload_file(&self, file_path: &str, file_up_path: &str, data: &[u8]) -> Response {
+        match fs::write(file_up_path, data).await {
             Ok(_) => Response::Message { content: format!("File {} uploaded successfully.", file_path) },
             Err(e) => {
-                eprintln!("Failed to write file {}: {}", file_path, e);
+                eprintln!("Failed to write file {}: {}", file_up_path, e);
                 Response::Message { content: format!("Failed to write file: {}", e) }
             }
         }
@@ -102,14 +102,13 @@ impl RxCommandHandler {
     async fn process_binary_message(&mut self, data: Vec<u8>) -> Result<(), String> {
         let decrypted_data = communication::prepare_rx(data, &self.passphrase);
 
-        // Attempt to deserialize as a `Command`
         if let Ok(command) = serde_json::from_slice::<NodeCommand>(&decrypted_data) {
+            println!("Received command: {:?}", command);
+
             let response = self.handle_command(command).await;
             self.send_response(response).await;
         }
-        // If not a command, attempt to deserialize as a `Response`
         else if let Ok(response) = serde_json::from_slice::<Response>(&decrypted_data) {
-            // Handle the response as needed
             println!("Received response: {:?}", response);
         } else {
             return Err("Failed to deserialize message as either Command or Response".to_string());

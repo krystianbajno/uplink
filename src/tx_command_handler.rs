@@ -7,7 +7,6 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use crate::communication;
 use crate::command::{Command as NodeCommand, Response};
-use crate::compression;
 
 pub struct TxCommandHandler {
     passphrase: String,
@@ -41,11 +40,21 @@ impl TxCommandHandler {
             "LIST" | "LS" => NodeCommand::ListFiles,
             "GET" | "DOWNLOAD" => NodeCommand::GetFile { file_path: args.to_string() },
             "PUT" | "UPLOAD" => {
-                let file_path = args.to_string();
+                let arg_parts: Vec<&str> = args.splitn(2, ' ').collect();
+
+                if arg_parts.len() < 2 {
+                    eprintln!("PUT/UPLOAD command requires both file path and upload path.");
+                    return;
+                }
+
+                let file_path = arg_parts[0].to_string();
+                let file_up_path = arg_parts[1].to_string();
+
                 let data = fs::read(&file_path).await.unwrap_or_else(|_| vec![]);
-                NodeCommand::PutFile { file_path, data }
+
+                NodeCommand::PutFile { file_path, file_up_path, data }
             }
-            "SHELL" | "EXEC" | "RUN" => NodeCommand::Execute { command: args.to_string() },
+            "SHELL" | "EXEC" | "RUN" | "CMD" => NodeCommand::Execute { command: args.to_string() },
             "PASSPHRASE" => NodeCommand::ChangePassphrase { new_passphrase: args.to_string() },
             _ => {
                 eprintln!("Unknown command: {}", command);
@@ -97,10 +106,9 @@ impl TxCommandHandler {
                 for file in files {
                     println!("- {}", file);
                 }
-            }            
+            }
             Response::FileData { file_path, data } => {
-                let decompressed_data = compression::decompress(&data);
-                if let Err(e) = fs::write(&file_path, decompressed_data).await {
+                if let Err(e) = fs::write(&file_path, data).await {
                     eprintln!("Failed to write file {}: {}", file_path, e);
                 }
             }

@@ -33,7 +33,7 @@ pub async fn handle_cli(command_handler: Arc<Mutex<TxCommandHandler>>) {
     println!("+ CLI Handler UP and running. Enter commands below.");
     while let Ok(line) = lines.next_line().await {
         if let Some(command) = line {
-            let mut handler = command_handler.lock().await;
+            let handler = command_handler.lock().await;
             handler.handle_command(&command).await;
         }
     }
