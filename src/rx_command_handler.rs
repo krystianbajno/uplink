@@ -1,3 +1,4 @@
+use std::env;
 use std::sync::Arc;
 use futures_util::stream::{SplitSink, SplitStream, StreamExt};
 use tokio::fs;
@@ -9,6 +10,7 @@ use tokio_tungstenite::WebSocketStream;
 use crate::communication;
 use crate::command::{Command as NodeCommand, Response};
 use crate::response_handler;
+use users::{all_users};
 
 pub struct RxCommandHandler {
     passphrase: String,
@@ -52,11 +54,18 @@ impl RxCommandHandler {
     }
 
     async fn pwd(&self) -> Response {
-        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+        let current_dir = env::current_dir().unwrap();
+        Response::Message { content: current_dir.display().to_string() }
     }
 
     async fn users(&self) -> Response {
-        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+        let users = unsafe { all_users() };
+
+        let usernames: Vec<String> = users
+            .filter_map(|user| user.name().to_str().map(String::from))
+            .collect();
+
+        Response::UserList { users: usernames }
     }
 
     async fn netstat(&self) -> Response {
@@ -68,7 +77,11 @@ impl RxCommandHandler {
     }
 
     async fn whoami(&self) -> Response {
-        Response::Message { content: "NOT IMPLEMENTED".to_string() }
+        let username = env::var("USER")
+            .or_else(|_| env::var("USERNAME"))
+            .expect("Failed to get the current username");
+
+        Response::Message { content: username }
     }
 
 

@@ -20,6 +20,7 @@ pub enum Command {
 pub enum Response {
     Message { content: String },
     FileList { files: Vec<String> },
+    UserList { users: Vec<String> },
     FileData { file_path: String, data: Vec<u8> },
     CommandOutput { output: String },
 }
