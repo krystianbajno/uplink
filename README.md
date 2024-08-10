@@ -1,122 +1,124 @@
-<img src="https://raw.githubusercontent.com/krystianbajno/krystianbajno/main/img/uplink.png"/>
-
-
 # UPLINK
 
-UPLINK is an AES-GCM encrypted communication tool that leverages **WebSockets** for secure, and bi-directional communication between a client and a server. It supports **command execution**, **file transfers** (upload/download).
+**UPLINK** is a cross-platform Rust tool for secure file transfer and remote management using AES-256-GCM encryption over WebSockets. It provides robust, real-time communication between clients and servers, allowing for command execution, file transfers, and system management through both command-line and web interfaces.
 
 ## Features
 
-- **Bi-directional Communication:** Both the server and client can issue commands and receive responses.
-- **File Transfer:** Upload and download files and directories with gzip compression and AES-256-GCM encryption.
-- **Command Execution:** Execute shell commands on the remote server or client.
-- **Passphrase Protection:** Communication is encrypted with AES-256-GCM and the key is derived from a passphrase using HKDF, and can be changed during runtime.
-- **Web Interface:** A web-based interface allows issuing commands, managing files, and updating the passphrase from a browser.
+- **Bi-Directional Communication**: Both the server and client can issue commands and receive responses, enabling seamless remote management.
+- **Secure File Transfers**: Upload and download files or directories with gzip compression and AES-256-GCM encryption, ensuring data integrity and security.
+- **Remote Command Execution**: Execute shell commands on the remote server or client, providing powerful control over connected systems.
+- **Dynamic Passphrase Management**: Communications are encrypted with AES-256-GCM, with the encryption key derived from a passphrase using HKDF. Passphrases can be updated during runtime, with changes automatically synchronized across all connected nodes.
+- **Web Interface**: Manage files, issue commands, and update passphrases directly from a browser-based interface, enhancing accessibility and ease of use.
 
 ## Installation
 
-To compile UPLINK:
+To compile UPLINK, follow these steps:
 
-```sh
+```bash
 git clone <repository_url>
 cd uplink
 cargo build --release
 ```
 
-### Command Reference
-```bash
-H - Print help
-ECHO | PRINT | MSG - Send a message to connected node.
+## Command Reference
 
-GET | DOWNLOAD <remote> <local> - Download a file or directory.
-PUT | UPLOAD <local> <remote> - Upload a file or directory.
-LIST | LS | DIR - List files in the directory.
+- **General Commands**
+  - `H` - Print help
+  - `ECHO | PRINT | MSG` - Send a message to the connected node
 
-SHELL | EXEC | RUN | CMD <command> - Execute a shell command on the connected node.
+- **File Management**
+  - `GET | DOWNLOAD <remote> <local>` - Download a file or directory
+  - `PUT | UPLOAD <local> <remote>` - Upload a file or directory
+  - `LIST | LS | DIR` - List files in the directory
 
-ID | WHOAMI | WHO | W - Get current user
-PWD | WHERE - Get current directory path
-USERS - Get users on the system
-NETSTAT - Get network connections
-N | NETWORK | IFCONFIG | IPCONFIG - Get network adapter configuration
-SYSTEM | INFO | SYSTEMINFO | UNAME - Get system configuration
+- **Command Execution**
+  - `SHELL | EXEC | RUN | CMD <command>` - Execute a shell command on the connected node
 
-PASSPHRASE - Change the encryption passphrase.
-```
+- **System Information**
+  - `ID | WHOAMI | WHO | W` - Get current user information
+  - `PWD | WHERE` - Get the current directory path
+  - `USERS` - List users on the system
+  - `NETSTAT` - Display network connections
+  - `N | NETWORK | IFCONFIG | IPCONFIG` - Get network adapter configuration
+  - `SYSTEM | INFO | SYSTEMINFO | UNAME` - Get system configuration details
+
+- **Encryption Management**
+  - `PASSPHRASE` - Change the encryption passphrase
 
 ## Usage
+
 ### Starting the Server
-```
+
+```bash
 ./uplink server 127.0.0.1:8080
 ```
+
 ### Starting the Client
-```
+
+```bash
 ./uplink client 127.0.0.1:8080
 ```
 
-### Use precompiled parameters
-Modify the parameters in `build.rs` file in order to run default parameters and embed connection instructions inside of binary at compile time.
-```
-`build.rs`
+### Using Precompiled Parameters
+
+You can preconfigure UPLINK by modifying the parameters in the `build.rs` file. This allows you to embed default connection instructions directly into the binary at compile time:
+
+```rust
 fn main() {
     println!("cargo:rustc-env=CARGO_PKG_METADATA_PRECOMPILED_MODE=server");
     println!("cargo:rustc-env=CARGO_PKG_METADATA_PRECOMPILED_ADDRESS=127.0.0.1:8080");
     println!("cargo:rustc-env=CARGO_PKG_METADATA_PRECOMPILED_PASSPHRASE=my_precompiled_passphrase");
 }
+```
+
+Compile and run:
+
+```bash
 ./uplink
 ```
 
-### Web Interface
-The UPLINK server also hosts a web interface that can be accessed via a browser:
+## Web Interface
 
-- **Dynamic WebSocket Connection:** Automatically connects using the appropriate `ws://` or `wss://` protocol based on the current URL.
-- **Command Execution:** Issue commands like `LIST`, `GET`, `PUT`, `SHELL`, etc., directly from the web interface's input field.
-- **File Management:** Upload files directly through the web interface. Uploaded files are compressed and encrypted before being sent to the server.
-- **Passphrase Management:** Enter and update the passphrase through the web interface. When the passphrase is updated, the change is propagated to connected nodes, ensuring synchronized encryption.
-- **Real-time Feedback:** View command outputs and other feedback directly within the web interface.
+The UPLINK server includes a web interface accessible via any modern web browser:
 
-### Using the Web Interface
+- **Dynamic WebSocket Connection**: Automatically connects using `ws://` or `wss://` based on the URL.
+- **Command Execution**: Issue commands such as `LIST`, `GET`, `PUT`, `SHELL`, etc., directly from the web interface.
+- **File Management**: Upload files through the interface; files are compressed and encrypted before being sent to the server.
+- **Passphrase Management**: Easily update the passphrase through the web interface. All connected nodes are automatically synchronized with the new passphrase.
+- **Real-time Feedback**: View command outputs and system feedback directly within the web interface.
 
-1. **Start the Server:** 
-   - Start the UPLINK server using the command:
-     ```sh
-     ./uplink server 127.0.0.1:8080
-     ```
-2. **Access the Interface:** 
-   - Open a web browser and navigate to `http://<server_ip>:8080`.
-3. **Manage Files and Commands:**
-   - Use the web interface to upload files, issue commands, and manage the encryption passphrase.
-4. **Command Input:**
-   - Enter commands in the provided input field and click "Send Command" to execute.
-5. **Passphrase Update:**
-   - Enter a new passphrase in the designated field. If a previous passphrase existed, the update will automatically be communicated to all connected nodes.
+### Accessing the Web Interface
+
+1. **Start the Server**:
+   ```bash
+   ./uplink server 127.0.0.1:8080
+   ```
+2. **Open a Web Browser**:
+   Navigate to `http://<server_ip>:8080`.
+3. **Manage Files and Commands**:
+   Use the interface to upload files, issue commands, and manage the encryption passphrase.
 
 ### Example Workflow Using the Web Interface
 
-- **Connect to the Server:**
-  - Navigate to `http://127.0.0.1:8080` in your browser after starting the server.
-- **Execute a Command:**
-  - Enter `LIST` or `LS` to list files in the server directory.
-- **Upload a File:**
-  - Use the file input to select a file and click "Upload" to securely transfer the file to the server.
-- **Change Passphrase:**
-  - Update the passphrase by entering a new value in the passphrase field, which will synchronize the passphrase across connected nodes.
+1. **Connect to the Server**:  
+   Navigate to `http://127.0.0.1:8080` in your browser.
+2. **Execute a Command**:  
+   Enter `LIST` or `LS` to list files in the server directory.
+3. **Upload a File**:  
+   Use the file input to select a file and click "Upload" to securely transfer the file to the server.
+4. **Change Passphrase**:  
+   Update the passphrase by entering a new value in the passphrase field. The update will be synchronized across all connected nodes.
 
-### Example Usage
+## How It Works
 
-```sh
-# Server-side
-./uplink server 127.0.0.1:8080
+- **Encryption**: All communications are secured using AES-256-GCM encryption to ensure data confidentiality and integrity.
+- **Compression**: Data is compressed using gzip before encryption, optimizing transmission speed and reducing bandwidth usage.
+- **Passphrase Management**: The encryption passphrase is dynamically managed and can be updated during a session. Updates are automatically synchronized across all connected nodes, ensuring consistent security.
 
-# Client-side
-./uplink client 127.0.0.1:8080
-SHELL ls
+## Contributing
 
-# Using the Web Interface
-- Navigate to `http://127.0.0.1:8080` in your browser.
-- Enter commands, upload files, or change the passphrase via the web interface.
+Contributions are welcome! Please fork the repository and submit a pull request with your improvements.
 
-### How it works
-- **Encryption**: All communications are secured using AES-256-GCM encryption.
-- **Compression**: Data is compressed using gzip before encryption, reducing transmission size.
-- **Passphrase Management**: The passphrase is dynamically managed and can be updated during a session. Updates are automatically synchronized across connected nodes.
+## License
+
+UPLINK is licensed under the WTFPL License. See the [LICENSE](LICENSE) file for more details.
