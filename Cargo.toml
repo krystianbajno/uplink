@@ -13,3 +13,4 @@ flate2 = "1.0"            # For compression and decompression
 tokio = { version = "1", features = ["full"] }  # Asynchronous runtime
 futures-util = "0.3"      # For futures utilities
 tokio-tungstenite = "0.23.1" # For WebSocket support
+url = "2.2" 

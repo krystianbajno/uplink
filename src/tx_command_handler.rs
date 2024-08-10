@@ -1,23 +1,29 @@
+
+use std::sync::Arc;
+
 use futures_util::stream::{SplitSink, SplitStream};
 use tokio::fs;
 use tokio::net::TcpStream;
+use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::WebSocketStream;
 use crate::communication::{self, prepare_tx};
 use crate::compression;
 use crate::crypto;
 
+
 pub struct TxCommandHandler {
     passphrase: String,
-    ws_sender: Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>,
-    ws_receiver: Option<SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>>,
+    ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
+    ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
 }
+
 
 impl TxCommandHandler {
     pub fn new(
         passphrase: String,
-        ws_sender: Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>,
-        ws_receiver: Option<SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>>,
+        ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
+        ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
     ) -> Self {
         TxCommandHandler { passphrase, ws_sender, ws_receiver }
     }
