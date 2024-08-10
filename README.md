@@ -29,10 +29,7 @@ cargo build --release
 ```
 ./uplink client 127.0.0.1:8080
 ```
-### Disable code execution
-```
-./uplink server 127.0.0.1:8080 --no-code-exec
-```
+
 ### Use precompiled parameters
 ```
 `Cargo.toml`
