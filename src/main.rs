@@ -17,7 +17,6 @@ use tx_command_handler::TxCommandHandler;
 #[tokio::main]
 async fn main() {
     let (mode, address, passphrase) = get_config();
-
     let passphrase = Arc::new(passphrase);
 
     match mode.as_str() {
@@ -28,16 +27,6 @@ async fn main() {
 }
 
 fn get_config() -> (String, String, String) {
-    #[cfg(feature = "precompiled_mode")]
-    let mode = env!("CARGO_PKG_METADATA_PRECOMPILED_MODE").to_string();
-
-    #[cfg(feature = "precompiled_address")]
-    let address = env!("CARGO_PKG_METADATA_PRECOMPILED_ADDRESS").to_string();
-
-    #[cfg(feature = "precompiled_passphrase")]
-    let passphrase = env!("CARGO_PKG_METADATA_PRECOMPILED_PASSPHRASE").to_string();
-
-    #[cfg(not(feature = "precompiled_mode"))]
     let mode = {
         let args: Vec<String> = std::env::args().collect();
         if args.len() > 1 {
@@ -48,7 +37,6 @@ fn get_config() -> (String, String, String) {
         }
     };
 
-    #[cfg(not(feature = "precompiled_address"))]
     let address = {
         let args: Vec<String> = std::env::args().collect();
         if args.len() > 2 {
@@ -59,10 +47,7 @@ fn get_config() -> (String, String, String) {
         }
     };
 
-    #[cfg(not(feature = "precompiled_passphrase"))]
-    let passphrase = {
-        std::env::var("PASSPHRASE").unwrap_or_else(|_| "default_passphrase".to_string())
-    };
+    let passphrase = std::env::var("PASSPHRASE").unwrap_or_else(|_| "default_passphrase".to_string());
 
     (mode, address, passphrase)
 }
@@ -75,7 +60,6 @@ async fn start_client(address: &str, passphrase: Arc<String>) {
         .expect("Failed to upgrade to WebSocket");
 
     let (ws_sender, ws_receiver) = ws_stream.split();
-
     let ws_sender = Arc::new(Mutex::new(ws_sender));
     let ws_receiver = Arc::new(Mutex::new(ws_receiver));
 
@@ -96,43 +80,51 @@ async fn start_client(address: &str, passphrase: Arc<String>) {
         let mut command_handler_for_ws = rx_command_handler.lock().await;
         command_handler_for_ws.handle_rx().await;
     });
+
+    loop {
+        // Keep the connection alive, handle any potential pings or keep-alive logic here.
+        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+    }
 }
 
 async fn start_server(bind_addr: &str, passphrase: Arc<String>) {
     let listener = TcpListener::bind(bind_addr).await.unwrap();
     println!("Server listening on {}", bind_addr);
 
-    while let Ok((stream, _)) = listener.accept().await {
-        if communication::is_http_request(&stream).await {
+    while let Ok((mut stream, _)) = listener.accept().await {
+        if communication::is_websocket_upgrade_request(&mut stream).await {
+            match accept_async(stream).await {
+                Ok(ws_stream) => {
+                    let (ws_sender, ws_receiver) = ws_stream.split();
+                    let ws_sender = Arc::new(Mutex::new(ws_sender));
+                    let ws_receiver = Arc::new(Mutex::new(ws_receiver));
+
+                    let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
+                        passphrase.clone().to_string(),
+                        Some(Arc::clone(&ws_sender)),
+                        Some(Arc::clone(&ws_receiver)),
+                    )));
+                    let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
+                        passphrase.clone().to_string(),
+                        Some(Arc::clone(&ws_sender)),
+                        Some(Arc::clone(&ws_receiver)),
+                    )));
+
+                    tokio::spawn(communication::handle_cli(Arc::clone(&tx_command_handler)));
+
+                    tokio::spawn(async move {
+                        let mut command_handler_for_ws = rx_command_handler.lock().await;
+                        command_handler_for_ws.handle_rx().await;
+                    });
+                }
+                Err(e) => {
+                    eprintln!("WebSocket handshake failed: {:?}", e);
+                    continue;
+                }
+            }
+        } else {
+            // Handle as an HTTP request
             communication::handle_http_request(stream).await;
-            continue;
         }
-
-        let ws_stream = accept_async(stream)
-            .await
-            .expect("Error during WebSocket handshake");
-
-        let (ws_sender, ws_receiver) = ws_stream.split();
-
-        let ws_sender = Arc::new(Mutex::new(ws_sender));
-        let ws_receiver = Arc::new(Mutex::new(ws_receiver));
-
-        let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
-            passphrase.clone().to_string(),
-            Some(Arc::clone(&ws_sender)),
-            Some(Arc::clone(&ws_receiver)),
-        )));
-        let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
-            passphrase.clone().to_string(),
-            Some(Arc::clone(&ws_sender)),
-            Some(Arc::clone(&ws_receiver)),
-        )));
-
-        tokio::spawn(communication::handle_cli(Arc::clone(&tx_command_handler)));
-
-        tokio::spawn(async move {
-            let mut command_handler_for_ws = rx_command_handler.lock().await;
-            command_handler_for_ws.handle_rx().await;
-        });
     }
 }

@@ -24,7 +24,14 @@ impl TxCommandHandler {
         TxCommandHandler { passphrase, ws_sender, ws_receiver }
     }
 
-    pub async fn handle_command(&mut self, command: &str) {
+    pub async fn handle_command(&self, command: &str) {
+        let command = command.trim();
+
+        if command.is_empty() {
+            println!("Empty command received, nothing to execute.");
+            return;
+        }
+
         let parts: Vec<&str> = command.split_whitespace().collect();
         let cmd = parts.get(0).unwrap_or(&"");
         let args = &parts[1..].join(" ");
@@ -46,44 +53,51 @@ impl TxCommandHandler {
             }
         };
 
-        self.send_command(node_command).await;
-        self.wait_for_response().await;
-    }
+        tokio::spawn({
+            let ws_sender = self.ws_sender.clone();
+            let passphrase = self.passphrase.clone();
+            async move {
+                let serialized_command = serde_json::to_vec(&node_command).expect("Failed to serialize command");
+                let encrypted_command = communication::prepare_tx(serialized_command, &passphrase);
+                if let Some(ws_sender) = ws_sender {
+                    let mut sender = ws_sender.lock().await;
+                    communication::send_binary_data(&mut sender, encrypted_command).await;
+                }
+            }
+        });
 
-    async fn send_command(&self, command: NodeCommand) {
-        let serialized_command = serde_json::to_vec(&command).expect("Failed to serialize command");
-        let encrypted_command = communication::prepare_tx(serialized_command, &self.passphrase);
-
-        if let Some(ws_sender) = &self.ws_sender {
-            let mut sender = ws_sender.lock().await;
-            communication::send_binary_data(&mut sender, encrypted_command).await;
-        }
-    }
-
-    async fn wait_for_response(&mut self) {
-        if let Some(ws_receiver) = &self.ws_receiver {
-            while let Some(message) = ws_receiver.lock().await.next().await {
-                match message {
-                    Ok(Message::Binary(data)) => {
-                        let decrypted_data = communication::prepare_rx(data, &self.passphrase);
-                        let response: Response = serde_json::from_slice(&decrypted_data).expect("Failed to deserialize response");
-                        self.process_response(response).await;
-                        break;
-                    }
-                    Ok(_) => eprintln!("Received unexpected non-binary message"),
-                    Err(e) => {
-                        eprintln!("Error receiving WebSocket message: {}", e);
-                        break;
+        tokio::spawn({
+            let ws_receiver = self.ws_receiver.clone();
+            let passphrase = self.passphrase.clone();
+            async move {
+                if let Some(ws_receiver) = ws_receiver {
+                    while let Some(message) = ws_receiver.lock().await.next().await {
+                        match message {
+                            Ok(Message::Binary(data)) => {
+                                let decrypted_data = communication::prepare_rx(data, &passphrase);
+                                let response: Response = serde_json::from_slice(&decrypted_data).expect("Failed to deserialize response");
+                                Self::process_response(response).await;
+                            }
+                            Ok(_) => eprintln!("Received unexpected non-binary message"),
+                            Err(e) => {
+                                eprintln!("Error receiving WebSocket message: {}", e);
+                                break;
+                            }
+                        }
                     }
                 }
             }
-        }
+        });
     }
 
-    async fn process_response(&self, response: Response) {
+    async fn process_response(response: Response) {
         match response {
             Response::Message { content } => println!("Received message: {}", content),
-            Response::FileList { files } => println!("Received file list: {:?}", files),
+            Response::FileList { files } => {
+                for file in files {
+                    println!("- {}", file);
+                }
+            }            
             Response::FileData { file_path, data } => {
                 let decompressed_data = compression::decompress(&data);
                 if let Err(e) = fs::write(&file_path, decompressed_data).await {

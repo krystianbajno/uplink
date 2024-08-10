@@ -99,13 +99,24 @@ impl RxCommandHandler {
         Response::Message { content: "Passphrase changed successfully.".to_string() }
     }
 
-    async fn process_binary_message(&mut self, data: Vec<u8>) -> Response {
+    async fn process_binary_message(&mut self, data: Vec<u8>) -> Result<(), String> {
         let decrypted_data = communication::prepare_rx(data, &self.passphrase);
-        let command: NodeCommand = serde_json::from_slice(&decrypted_data)
-            .expect("Failed to deserialize command");
-    
-        self.handle_command(command).await
+
+        // Attempt to deserialize as a `Command`
+        if let Ok(command) = serde_json::from_slice::<NodeCommand>(&decrypted_data) {
+            let response = self.handle_command(command).await;
+            self.send_response(response).await;
+        }
+        // If not a command, attempt to deserialize as a `Response`
+        else if let Ok(response) = serde_json::from_slice::<Response>(&decrypted_data) {
+            // Handle the response as needed
+            println!("Received response: {:?}", response);
+        } else {
+            return Err("Failed to deserialize message as either Command or Response".to_string());
+        }
+        Ok(())
     }
+    
 
     async fn send_response(&self, response: Response) {
         if let Some(ws_sender) = &self.ws_sender {
@@ -115,13 +126,13 @@ impl RxCommandHandler {
             communication::send_binary_data(&mut sender, encrypted_response).await;
         }
     }
-
     pub async fn handle_rx(&mut self) {
         while let Some(message) = self.get_next_message().await {
             match message {
                 Ok(Message::Binary(data)) => {
-                    let response = self.process_binary_message(data).await;
-                    self.send_response(response).await;
+                    if let Err(e) = self.process_binary_message(data).await {
+                        eprintln!("Failed to process binary message: {}", e);
+                    }
                 }
                 Ok(Message::Text(text)) => {
                     eprintln!("Unexpected text message: {}", text);

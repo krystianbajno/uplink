@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use futures_util::stream::SplitSink;
-use tokio::io;
 use tokio::net::TcpStream;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::protocol::Message;
@@ -27,22 +26,24 @@ pub async fn send_binary_data(ws_sender: &mut SplitSink<WebSocketStream<TcpStrea
 }
 
 pub async fn handle_cli(command_handler: Arc<Mutex<TxCommandHandler>>) {
-    let stdin = io::stdin();
-    let reader = io::BufReader::new(stdin);
+    let stdin = tokio::io::stdin();
+    let reader = tokio::io::BufReader::new(stdin);
     let mut lines = reader.lines();
 
     println!("+ CLI Handler UP and running. Enter commands below.");
-
-    while let Ok(Some(command)) = lines.next_line().await {
-        let mut handler = command_handler.lock().await;
-        handler.handle_command(&command).await;
+    while let Ok(line) = lines.next_line().await {
+        if let Some(command) = line {
+            let mut handler = command_handler.lock().await;
+            handler.handle_command(&command).await;
+        }
     }
 }
 
-pub async fn is_http_request(stream: &TcpStream) -> bool {
-    let mut buffer = [0; 4];
-    if let Ok(_) = stream.peek(&mut buffer).await {
-        return buffer.starts_with(b"GET ");
+pub async fn is_websocket_upgrade_request(stream: &mut TcpStream) -> bool {
+    let mut buffer = [0; 1024];
+    if let Ok(n) = stream.peek(&mut buffer).await {
+        let request = String::from_utf8_lossy(&buffer[..n]);
+        return request.contains("Upgrade: websocket");
     }
     false
 }

@@ -23,15 +23,15 @@ cargo build --release
 ## Usage
 ### Starting the Server
 ```
-./uplink --listen 127.0.0.1:8080
+./uplink server 127.0.0.1:8080
 ```
 ### Starting the Client
 ```
-./uplink --connect 127.0.0.1:8080
+./uplink client 127.0.0.1:8080
 ```
 ### Disable code execution
 ```
-./uplink --listen 127.0.0.1:8080 --no-code-exec
+./uplink server 127.0.0.1:8080 --no-code-exec
 ```
 ### Use precompiled parameters
 ```
@@ -94,10 +94,10 @@ The UPLINK server also hosts a web interface that can be accessed via a browser:
 
 ```sh
 # Server-side
-./uplink --server 127.0.0.1:8080
+./uplink server 127.0.0.1:8080
 
 # Client-side
-./uplink --client 127.0.0.1:8080
+./uplink client 127.0.0.1:8080
 SHELL ls
 
 # Using the Web Interface
