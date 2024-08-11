@@ -3,11 +3,12 @@ use tokio::fs;
 
 pub async fn process_response(response: Response) {
     match response {
-        Response::Message { content } => println!("Received message:\n{}", content),
+        Response::Message { content } => println!("Received message:\n{}\n", content),
         Response::FileList { files } => {
             for file in files {
                 println!("{}", file);
             }
+            println!("");
         }
         Response::FileData { file_path, data } => {
             println!("{:?} {:?}", file_path, data);
@@ -19,7 +20,9 @@ pub async fn process_response(response: Response) {
             for user in users {
                 println!("{}", user);
             }
+            println!("");
         }
-        Response::CommandOutput { output } => println!("Command output:\n{}", output),
+
+        Response::CommandOutput { output } => println!("Command output:\n{}\n", output),
     }
 }

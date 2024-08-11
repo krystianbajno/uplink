@@ -131,7 +131,7 @@ impl RxCommandHandler {
     async fn execute_command(&self, command: &str) -> Response {
         if self.no_exec {
             println!("Execution of commands is disabled (--no-exec flag). Command: {}", command);
-            return Response::Message { content: format!("Peer has disabled executing commands.") }
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
         }
 
         let cmd_result = if cfg!(target_os = "windows") {
@@ -154,14 +154,14 @@ impl RxCommandHandler {
             }
             Err(e) => {
                 eprintln!("Failed to execute command: {}", e);
-                Response::Message { content: format!("Failed to execute command: {}", e) }
+                Response::Message { content: format!("Failed to execute command: {}\n", e) }
             }
         }
     }
 
     async fn change_passphrase(&mut self, new_passphrase: &str) -> Response {
         self.passphrase = new_passphrase.to_string();
-        Response::Message { content: "Passphrase changed successfully.".to_string() }
+        Response::Message { content: "Passphrase changed successfully.\n".to_string() }
     }
     
     async fn send_response(&self, response: Response) {
@@ -180,7 +180,7 @@ impl RxCommandHandler {
                     let decrypted_data = communication::prepare_rx(data, &self.passphrase);
                     
                     if let Ok(command) = serde_json::from_slice::<NodeCommand>(&decrypted_data) {
-                        println!("Received command:\n {:?}", command);
+                        println!("Received command:\n {:?}\n", command);
                         let response = self.handle_command(command).await;
                         self.send_response(response).await;
                     } else if let Ok(response) = serde_json::from_slice::<Response>(&decrypted_data) {
