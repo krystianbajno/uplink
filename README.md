@@ -2,7 +2,7 @@
 
 # UPLINK
 
-**UPLINK** is a cross-platform Rust tool for secure file transfer and remote management using AES-256-GCM encryption over WebSockets. It provides robust, real-time communication between clients and servers, allowing for command execution, file transfers, and system management through both command-line and web interfaces.
+**UPLINK** is a Rust cross-platform tool for file transfer and remote management that uses AES-256-GCM encryption over WebSockets. It provides robust, real-time communication between clients and servers, allowing for command execution, file transfers, and system management through both command-line and web interface.
 
 ## Features
 
@@ -52,13 +52,13 @@ cargo build --release
 ### Starting the Server
 
 ```bash
-./uplink server 127.0.0.1:8080
+PASSPHRASE=SetYourStrongPassphraseHere ./uplink server 127.0.0.1:8080
 ```
 
 ### Starting the Client
 
 ```bash
-./uplink client 127.0.0.1:8080
+PASSPHRASE=SetYourStrongPassphraseHere ./uplink client 127.0.0.1:8080
 ```
 
 ### Disable execution of commands by peers
