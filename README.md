@@ -7,11 +7,11 @@
 ## Features
 
 - **Bi-Directional Communication**: Both the server and client can issue commands and receive responses, enabling seamless remote management. Yes, if you connect to the server, the server can execute commands on your computer (you can specify --no-exec flag to disallow that).
-- **Secure File Transfers**: Upload and download files or directories with gzip compression and AES-256-GCM encryption, ensuring data integrity and security.
+- **Secure File Transfers**: Upload and download files with ease.
 - **Remote Command Execution**: Execute shell commands on the remote server or client, providing powerful control over connected systems.
-- **Dynamic Passphrase Management**: Communications are encrypted with AES-256-GCM, with the encryption key derived from a passphrase using HKDF. Passphrases can be updated during runtime, with changes automatically synchronized across all connected nodes.
 - **Web Interface**: Manage files, issue commands, and update passphrases directly from a browser-based interface, enhancing accessibility and ease of use.
-- **Reconnect**: When client loses connection, it will attempt to reconnect in 5 seconds interval.
+- **Encryption**: All communications are secured using AES-256-GCM encryption to ensure data confidentiality and integrity. Hide from Blue Team with ease.
+- **Compression**: Data is compressed using gzip before encryption, optimizing transmission speed and reducing bandwidth usage.
 
 ## Installation
 
@@ -96,10 +96,9 @@ Compile and run:
 
 The UPLINK server includes a web interface accessible via any modern web browser:
 
-- **Dynamic WebSocket Connection**: Automatically connects using `ws://` or `wss://` based on the URL.
+- **Dynamic WebSocket Connection**: Automatically connects using `ws://` or `wss://` based on the URL. Enter passphrase and press connect.
 - **Command Execution**: Issue commands such as `LIST`, `GET`, `PUT`, `SHELL`, etc., directly from the web interface.
 - **File Management**: Upload files through the interface; files are compressed and encrypted before being sent to the server.
-- **Passphrase Management**: Easily update the passphrase through the web interface. All connected nodes are automatically synchronized with the new passphrase.
 - **Real-time Feedback**: View command outputs and system feedback directly within the web interface.
 
 ### Accessing the Web Interface
@@ -116,19 +115,13 @@ The UPLINK server includes a web interface accessible via any modern web browser
 ### Example Workflow Using the Web Interface
 
 1. **Connect to the Server**:  
-   Navigate to `http://127.0.0.1:8080` in your browser.
+   Navigate to `http://127.0.0.1:8080` in your browser. Enter the passphrase and press connect.
 2. **Execute a Command**:  
-   Enter `LIST` or `LS` to list files in the server directory.
+   Enter command into the command input and press "Send Command".
 3. **Upload a File**:  
    Use the file input to select a file and click "Upload" to securely transfer the file to the server.
-4. **Change Passphrase**:  
-   Update the passphrase by entering a new value in the passphrase field. The update will be synchronized across all connected nodes.
-
-## How It Works
-
-- **Encryption**: All communications are secured using AES-256-GCM encryption to ensure data confidentiality and integrity.
-- **Compression**: Data is compressed using gzip before encryption, optimizing transmission speed and reducing bandwidth usage.
-- **Passphrase Management**: The encryption passphrase is dynamically managed and can be updated during a session. Updates are automatically synchronized across all connected nodes, ensuring consistent security.
+4. **Download a file**:  
+   The files in current working directory are listed. Click on them to download them.
 
 ## Contributing
 
