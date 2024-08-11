@@ -61,7 +61,7 @@ async fn connect_and_run(
         async move {
             let mut handler = rx_command_handler.lock().await;
             handler.handle_rx().await;
-            shutdown_notify.notify_one(); // Notify the main loop that this task is done
+            shutdown_notify.notify_one();
         }
     });
 
@@ -70,7 +70,7 @@ async fn connect_and_run(
         let shutdown_notify = shutdown_notify.clone();
         async move {
             handle_cli(tx_command_handler).await;
-            shutdown_notify.notify_one(); // Notify the main loop that this task is done
+            shutdown_notify.notify_one();
         }
     });
 
