@@ -120,9 +120,9 @@ impl RxCommandHandler {
     }
 
     async fn list_files(&self) -> Response {
-        if self.no_exec || self.no_transfer {
-            println!("Listing files is disallowed (--no-transfer or --no-exec flag).");
-            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        if self.no_transfer {
+            println!("Listing files is disallowed (--no-transfer flag).");
+            return Response::Message { content: format!("Transfer is disallowed (--no-transfer flag).\n") }
         }
 
         let mut file_list = vec![];
@@ -225,7 +225,8 @@ impl RxCommandHandler {
             match message {
                 Ok(Message::Binary(data)) => {
                     let decrypted_data = communication::prepare_rx(data, &self.passphrase);
-                    
+                    eprintln!("{:?}", String::from_utf8_lossy(&decrypted_data));
+
                     if let Ok(command) = serde_json::from_slice::<NodeCommand>(&decrypted_data) {
                         println!("Received command:\n {:?}\n", command);
                         let response = self.handle_command(command).await;
