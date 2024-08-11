@@ -1,27 +1,25 @@
 use std::sync::Arc;
-use futures_util::stream::{SplitSink, SplitStream, StreamExt};
+use futures_util::stream::SplitSink;
 use tokio::fs;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
-use crate::{communication, response_handler};
-use crate::command::{Command as NodeCommand, Response};
+use crate::communication;
+use crate::command::Command as NodeCommand;
 use indoc::indoc;
 
 pub struct TxCommandHandler {
     passphrase: String,
     ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
-    ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
 }
 
 impl TxCommandHandler {
     pub fn new(
         passphrase: String,
         ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
-        ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
     ) -> Self {
-        TxCommandHandler { passphrase, ws_sender, ws_receiver }
+        TxCommandHandler { passphrase, ws_sender }
     }
 
     pub async fn handle_command(&self, command: &str) {
@@ -44,11 +42,11 @@ impl TxCommandHandler {
                     H - Print help
                     ECHO | PRINT | MSG - Send a message to connected node.
 
-                    GET | DOWNLOAD <remote> <local> - Download a file or directory.
-                    PUT | UPLOAD <local> <remote> - Upload a file or directory.
-                    LIST | LS | DIR - List files in the directory.
+                    GET | DOWNLOAD | D <remote> <local> - Download a file or directory.
+                    PUT | UPLOAD | U <local> <remote> - Upload a file or directory.
+                    LIST | LS | DIR | L - List files in the directory.
 
-                    SHELL | EXEC | RUN | CMD <command> - Execute a shell command on the connected node.
+                    SHELL | EXEC | RUN | CMD | E | X <command> - Execute a shell command on the connected node.
                     
                     ID | WHOAMI | WHO | W - Get current user
                     PWD | WHERE - Get current directory path
@@ -62,15 +60,15 @@ impl TxCommandHandler {
                 println!("{}", help);
                 return;
             }
-            "ECHO" | "PRINT" | "MSG" => NodeCommand::Echo { message: args.to_string() },
-            "LIST" | "LS" | "DIR" => NodeCommand::ListFiles,
+            "TEXT" | "ECHO" | "PRINT" | "MSG" | "T" => NodeCommand::Echo { message: args.to_string() },
+            "L" | "LIST" | "LS" | "DIR" => NodeCommand::ListFiles,
             "ID" | "WHOAMI" | "WHO" | "W" => NodeCommand::Whoami,
             "PWD" | "WHERE" => NodeCommand::Pwd,
             "USERS"  => NodeCommand::Users,
             "NETSTAT" => NodeCommand::Netstat,
             "N" | "NETWORK" | "IFCONFIG" | "IPCONFIG" => NodeCommand::Network,
             "SYSTEM" | "INFO" | "SYSTEMINFO" | "UNAME" => NodeCommand::Info,
-            "GET" | "DOWNLOAD" => { 
+            "D" | "GET" | "DOWNLOAD" => { 
                 let arg_parts: Vec<&str> = args.splitn(2, ' ').collect();
 
                 if arg_parts.len() < 2 {
@@ -83,7 +81,7 @@ impl TxCommandHandler {
 
                 NodeCommand::GetFile { file_path, file_local_path }
             },
-            "PUT" | "UPLOAD" => {
+            "U" | "PUT" | "UPLOAD" => {
                 let arg_parts: Vec<&str> = args.splitn(2, ' ').collect();
 
                 if arg_parts.len() < 2 {
@@ -98,7 +96,7 @@ impl TxCommandHandler {
 
                 NodeCommand::PutFile { file_path, file_up_path, data }
             }
-            "SHELL" | "EXEC" | "RUN" | "CMD" => NodeCommand::Execute { command: args.to_string() },
+            "E" | "X" |"SHELL" | "EXEC" | "RUN" | "CMD" => NodeCommand::Execute { command: args.to_string() },
             "PASSPHRASE" => NodeCommand::ChangePassphrase { new_passphrase: args.to_string() },
             _ => {
                 eprintln!("Unknown command: {}", command);
@@ -106,42 +104,16 @@ impl TxCommandHandler {
             }
         };
 
-        tokio::spawn({
-            let ws_sender = self.ws_sender.clone();
-            let passphrase = self.passphrase.clone();
-            async move {
-                let serialized_command = serde_json::to_vec(&node_command).expect("Failed to serialize command");
-                let encrypted_command = communication::prepare_tx(serialized_command, &passphrase);
-                if let Some(ws_sender) = ws_sender {
-                    let mut sender = ws_sender.lock().await;
-                    communication::send_binary_data(&mut sender, encrypted_command).await;
-                }
-            }
-        });
+        if let Some(ws_sender) = &self.ws_sender {
+            let mut sender = ws_sender.lock().await;
+            let serialized_command = serde_json::to_vec(&node_command).expect("Failed to serialize command");
+            let encrypted_command = communication::prepare_tx(serialized_command, &self.passphrase);
 
-        tokio::spawn({
-            let ws_receiver = self.ws_receiver.clone();
-            let passphrase = self.passphrase.clone();
-            async move {
-                if let Some(ws_receiver) = ws_receiver {
-                    while let Some(message) = ws_receiver.lock().await.next().await {
-                        match message {
-                            Ok(Message::Binary(data)) => {
-                                let decrypted_data = communication::prepare_rx(data, &passphrase);
-                                let response: Response = serde_json::from_slice(&decrypted_data).expect("Failed to deserialize response");
-                                response_handler::process_response(response).await;
-                            }
-                            Ok(_) => eprintln!("Received unexpected non-binary message"),
-                            Err(e) => {
-                                eprintln!("Error receiving WebSocket message: {}", e);
-                                break;
-                            }
-                        }
-                    }
-                }
+            if let Err(e) = communication::send_binary_data(&mut sender, encrypted_command).await {
+                eprintln!("Failed to send command: {}", e);
             }
-        });
+        } else {
+            eprintln!("No active WebSocket connection. Command not sent.");
+        }
     }
-
-
 }

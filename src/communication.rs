@@ -16,10 +16,12 @@ pub fn prepare_rx(data: Vec<u8>, passphrase: &str) -> Vec<u8> {
     compression::decompress(&decrypted_data)
 }
 
-pub async fn send_binary_data(ws_sender: &mut SplitSink<WebSocketStream<TcpStream>, Message>, data: Vec<u8>) {
-    ws_sender.send(Message::Binary(data)).await.expect("Failed to send binary data");
+pub async fn send_binary_data(ws_sender: &mut SplitSink<WebSocketStream<TcpStream>, Message>, data: Vec<u8>) -> Result<(), String> {
+    match ws_sender.send(Message::Binary(data)).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to send binary data: {:?}", e)),
+    }
 }
-
 pub async fn is_websocket_upgrade_request(stream: &mut TcpStream) -> bool {
     let mut buffer = [0; 1024];
     if let Ok(n) = stream.peek(&mut buffer).await {

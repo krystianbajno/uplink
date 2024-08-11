@@ -217,7 +217,7 @@ impl RxCommandHandler {
             let mut sender = ws_sender.lock().await;
             let serialized_response = serde_json::to_vec(&response).expect("Failed to serialize response");
             let encrypted_response = communication::prepare_tx(serialized_response, &self.passphrase);
-            communication::send_binary_data(&mut sender, encrypted_response).await;
+            let _ = communication::send_binary_data(&mut sender, encrypted_response).await;
         }
     }
 
@@ -250,7 +250,7 @@ impl RxCommandHandler {
             }
         }
     }
-    
+
     async fn get_next_message(&self) -> Option<Result<Message, tokio_tungstenite::tungstenite::Error>> {
         if let Some(ws_receiver) = &self.ws_receiver {
             let mut receiver = ws_receiver.lock().await;
@@ -258,5 +258,5 @@ impl RxCommandHandler {
         } else {
             None
         }
-    }    
+    }
 }

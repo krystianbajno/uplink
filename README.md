@@ -11,6 +11,7 @@
 - **Remote Command Execution**: Execute shell commands on the remote server or client, providing powerful control over connected systems.
 - **Dynamic Passphrase Management**: Communications are encrypted with AES-256-GCM, with the encryption key derived from a passphrase using HKDF. Passphrases can be updated during runtime, with changes automatically synchronized across all connected nodes.
 - **Web Interface**: Manage files, issue commands, and update passphrases directly from a browser-based interface, enhancing accessibility and ease of use.
+- **Reconnect**: When client loses connection, it will attempt to reconnect in 5 seconds interval.
 
 ## Installation
 
@@ -25,16 +26,16 @@ cargo build --release
 ## Command Reference
 
 - **General Commands**
-  - `H` - Print help
-  - `ECHO | PRINT | MSG` - Send a message to the connected node
+  - `HELP | H ` - Print help
+  - `TEXT | ECHO | PRINT | MSG | T` - Send a message to the connected node
 
 - **File Management**
-  - `GET | DOWNLOAD <remote> <local>` - Download a file or directory
-  - `PUT | UPLOAD <local> <remote>` - Upload a file or directory
-  - `LIST | LS | DIR` - List files in the directory
+  - `GET | D | DOWNLOAD <remote> <local>` - Download a file or directory
+  - `PUT | U | UPLOAD <local> <remote>` - Upload a file or directory
+  - `LIST | L | LS | DIR` - List files in the directory
 
 - **Command Execution**
-  - `SHELL | EXEC | RUN | CMD <command>` - Execute a shell command on the connected node
+  - `E | X | SHELL | EXEC | RUN | CMD <command>` - Execute a shell command on the connected node
 
 - **System Information**
   - `ID | WHOAMI | WHO | W` - Get current user information

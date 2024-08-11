@@ -1,44 +1,99 @@
 use tokio::net::TcpStream;
 use tokio_tungstenite::client_async;
 use futures_util::stream::StreamExt;
+use futures_util::SinkExt;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
+use tokio::time::{sleep, Duration};
 use crate::rx_command_handler::RxCommandHandler;
 use crate::tx_command_handler::TxCommandHandler;
 use crate::io::handle_cli;
 
 pub async fn start_client(address: &str, passphrase: Arc<String>, no_exec: bool, no_transfer: bool) {
-    let tcp_stream = TcpStream::connect(address).await.expect("Failed to connect to server");
+    let shutdown_notify = Arc::new(Notify::new());
+
+    loop {
+        let shutdown_notify_clone = shutdown_notify.clone();
+        match connect_and_run(address, passphrase.clone(), no_exec, no_transfer, shutdown_notify_clone).await {
+            Ok(_) => eprintln!("Connection closed. Reconnecting in 5 seconds..."),
+            Err(e) => eprintln!("Connection error: {}. Reconnecting in 5 seconds...", e),
+        }
+        sleep(Duration::from_secs(5)).await;
+    }
+}
+
+async fn connect_and_run(
+    address: &str,
+    passphrase: Arc<String>,
+    no_exec: bool,
+    no_transfer: bool,
+    shutdown_notify: Arc<Notify>,
+) -> Result<(), String> {
+    let tcp_stream = TcpStream::connect(address)
+        .await
+        .map_err(|e| format!("Failed to connect: {}", e))?;
+
     let url = format!("ws://{}", address);
     let (ws_stream, _) = client_async(&url, tcp_stream)
         .await
-        .expect("Failed to upgrade to WebSocket");
+        .map_err(|e| format!("WebSocket upgrade failed: {}", e))?;
 
     let (ws_sender, ws_receiver) = ws_stream.split();
     let ws_sender = Arc::new(Mutex::new(ws_sender));
     let ws_receiver = Arc::new(Mutex::new(ws_receiver));
 
     let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
-        passphrase.clone().to_string(),
-        Some(Arc::clone(&ws_sender)),
-        Some(Arc::clone(&ws_receiver)),
+        passphrase.to_string(),
+        Some(ws_sender.clone()),
     )));
+
     let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
-        passphrase.clone().to_string(),
-        Some(Arc::clone(&ws_sender)),
-        Some(Arc::clone(&ws_receiver)),
+        passphrase.to_string(),
+        Some(ws_sender.clone()),
+        Some(ws_receiver.clone()),
         no_exec,
         no_transfer,
     )));
 
-    tokio::spawn(handle_cli(Arc::clone(&tx_command_handler)));
-
-    tokio::spawn(async move {
-        let mut command_handler_for_ws = rx_command_handler.lock().await;
-        command_handler_for_ws.handle_rx().await;
+    let rx_task = tokio::spawn({
+        let rx_command_handler = rx_command_handler.clone();
+        let shutdown_notify = shutdown_notify.clone();
+        async move {
+            let mut handler = rx_command_handler.lock().await;
+            handler.handle_rx().await;
+            shutdown_notify.notify_one(); // Notify the main loop that this task is done
+        }
     });
 
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-    }
+    let cli_task = tokio::spawn({
+        let tx_command_handler = tx_command_handler.clone();
+        let shutdown_notify = shutdown_notify.clone();
+        async move {
+            handle_cli(tx_command_handler).await;
+            shutdown_notify.notify_one(); // Notify the main loop that this task is done
+        }
+    });
+
+    let result = tokio::select! {
+        res = rx_task => {
+            match res {
+                Ok(_) => Err("Message handling task ended.".to_string()),
+                Err(e) => Err(format!("Message handling task error: {:?}", e)),
+            }
+        },
+        res = cli_task => {
+            match res {
+                Ok(_) => Err("CLI task ended.".to_string()),
+                Err(e) => Err(format!("CLI task error: {:?}", e)),
+            }
+        },
+        _ = shutdown_notify.notified() => {
+            Err("Connection lost or tasks terminated.".to_string())
+        }
+    };
+
+    // Ensure proper closure
+    let _ = ws_sender.lock().await.close().await;
+
+    result
 }
