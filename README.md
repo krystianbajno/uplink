@@ -1,3 +1,5 @@
+**Disclaimer**: The software provided is intended for educational and professional use. Users are expected to utilize it responsibly and with good intentions. The user assumes full responsibility for any actions taken with this software. I am not liable for any legal consequences arising from its use. 👮 🚔
+
 <img src="https://raw.githubusercontent.com/krystianbajno/krystianbajno/main/img/uplink.png"/>
 
 # UPLINK
