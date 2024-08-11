@@ -3,9 +3,9 @@ use tokio_tungstenite::client_async;
 use futures_util::stream::StreamExt;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::communication;
 use crate::rx_command_handler::RxCommandHandler;
 use crate::tx_command_handler::TxCommandHandler;
+use crate::io::handle_cli;
 
 pub async fn start_client(address: &str, passphrase: Arc<String>, no_exec: bool, no_transfer: bool) {
     let tcp_stream = TcpStream::connect(address).await.expect("Failed to connect to server");
@@ -31,7 +31,7 @@ pub async fn start_client(address: &str, passphrase: Arc<String>, no_exec: bool,
         no_transfer,
     )));
 
-    tokio::spawn(communication::handle_cli(Arc::clone(&tx_command_handler)));
+    tokio::spawn(handle_cli(Arc::clone(&tx_command_handler)));
 
     tokio::spawn(async move {
         let mut command_handler_for_ws = rx_command_handler.lock().await;

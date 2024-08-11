@@ -4,6 +4,7 @@ mod server;
 mod rx_command_handler;
 mod tx_command_handler;
 
+mod io;
 mod response_handler;
 mod command;
 mod communication;
