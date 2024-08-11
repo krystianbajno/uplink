@@ -18,7 +18,12 @@ pub async fn handle_cli(command_handler: Arc<Mutex<TxCommandHandler>>) {
                 }
 
                 let handler = command_handler.lock().await;
-                handler.handle_command(command).await;
+                if handler.is_connection_active().await {
+                    handler.handle_command(command).await;
+                } else {
+                    println!("Connection inactive. Waiting to reconnect...");
+                    break;
+                }
             }
             Ok(None) => {
                 break;

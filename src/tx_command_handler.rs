@@ -12,6 +12,7 @@ use indoc::indoc;
 pub struct TxCommandHandler {
     passphrase: String,
     ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
+    connection_active: Arc<Mutex<bool>>
 }
 
 impl TxCommandHandler {
@@ -19,7 +20,16 @@ impl TxCommandHandler {
         passphrase: String,
         ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
     ) -> Self {
-        TxCommandHandler { passphrase, ws_sender }
+        TxCommandHandler { 
+            passphrase, 
+            ws_sender, 
+            connection_active: Arc::new(Mutex::new(true)), // Initialize as active
+        }
+    }
+
+    pub async fn is_connection_active(&self) -> bool {
+        let connection_active = self.connection_active.lock().await;
+        *connection_active
     }
 
     pub async fn handle_command(&self, command: &str) {
@@ -111,6 +121,7 @@ impl TxCommandHandler {
 
             if let Err(e) = communication::send_binary_data(&mut sender, encrypted_command).await {
                 eprintln!("Failed to send command: {}", e);
+                return
             }
         } else {
             eprintln!("No active WebSocket connection. Command not sent.");

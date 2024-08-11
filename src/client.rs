@@ -1,7 +1,6 @@
 use tokio::net::TcpStream;
 use tokio_tungstenite::client_async;
 use futures_util::stream::StreamExt;
-use futures_util::SinkExt;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::{sleep, Duration};
@@ -61,7 +60,7 @@ async fn connect_and_run(
         async move {
             let mut handler = rx_command_handler.lock().await;
             handler.handle_rx().await;
-            shutdown_notify.notify_one();
+            shutdown_notify.notify_one(); // Notify the main loop that this task is done
         }
     });
 
@@ -70,30 +69,19 @@ async fn connect_and_run(
         let shutdown_notify = shutdown_notify.clone();
         async move {
             handle_cli(tx_command_handler).await;
-            shutdown_notify.notify_one();
+            shutdown_notify.notify_one(); // Notify the main loop that this task is done
         }
     });
 
-    let result = tokio::select! {
-        res = rx_task => {
-            match res {
-                Ok(_) => Err("Message handling task ended.".to_string()),
-                Err(e) => Err(format!("Message handling task error: {:?}", e)),
-            }
-        },
-        res = cli_task => {
-            match res {
-                Ok(_) => Err("CLI task ended.".to_string()),
-                Err(e) => Err(format!("CLI task error: {:?}", e)),
-            }
-        },
+    // Wait for either task to finish or for the connection to be lost
+    tokio::select! {
+        _ = rx_task => Err("Message handling task ended.".to_string()),
+        _ = cli_task => Err("CLI task ended.".to_string()),
         _ = shutdown_notify.notified() => {
+            // Ensure both tasks are terminated
+            drop(rx_command_handler);
+            drop(tx_command_handler);
             Err("Connection lost or tasks terminated.".to_string())
         }
-    };
-
-    // Ensure proper closure
-    let _ = ws_sender.lock().await.close().await;
-
-    result
+    }
 }

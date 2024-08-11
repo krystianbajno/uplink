@@ -7,10 +7,10 @@ use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use users::all_users;
 use crate::communication;
 use crate::command::{Command as NodeCommand, Response};
 use crate::response_handler;
-use users::all_users;
 
 pub struct RxCommandHandler {
     passphrase: String,
@@ -28,7 +28,7 @@ impl RxCommandHandler {
         no_exec: bool,
         no_transfer: bool,
     ) -> Self {
-        RxCommandHandler { passphrase, ws_sender, ws_receiver, no_exec, no_transfer}
+        RxCommandHandler { passphrase, ws_sender, ws_receiver, no_exec, no_transfer }
     }
 
     pub async fn handle_command(&mut self, command: NodeCommand) -> Response {
@@ -118,7 +118,6 @@ impl RxCommandHandler {
 
         Response::Message { content: username }
     }
-
 
     async fn list_files(&self) -> Response {
         if self.no_exec || self.no_transfer {
@@ -250,7 +249,7 @@ impl RxCommandHandler {
             }
         }
     }
-
+    
     async fn get_next_message(&self) -> Option<Result<Message, tokio_tungstenite::tungstenite::Error>> {
         if let Some(ws_receiver) = &self.ws_receiver {
             let mut receiver = ws_receiver.lock().await;
@@ -258,5 +257,5 @@ impl RxCommandHandler {
         } else {
             None
         }
-    }
+    }    
 }

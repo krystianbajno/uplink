@@ -64,7 +64,7 @@ async fn handle_connection(
                 });
 
                 loop {
-                    tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
                 }
             }
             Err(e) => {
