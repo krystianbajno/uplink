@@ -39,8 +39,8 @@ impl TxCommandHandler {
                 let help = indoc!{"
                     [UPLINK HELP]:
 
-                    H - Print help
-                    ECHO | PRINT | MSG - Send a message to connected node.
+                    H | HELP - Print help
+                    ECHO | PRINT | MSG | TEXT | T - Send a message to connected node.
 
                     GET | DOWNLOAD | D <remote> <local> - Download a file or directory.
                     PUT | UPLOAD | U <local> <remote> - Upload a file or directory.
