@@ -16,7 +16,8 @@ pub struct RxCommandHandler {
     passphrase: String,
     ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
     ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
-    no_exec: bool
+    no_exec: bool,
+    no_transfer: bool
 }
 
 impl RxCommandHandler {
@@ -25,8 +26,9 @@ impl RxCommandHandler {
         ws_sender: Option<Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>>,
         ws_receiver: Option<Arc<Mutex<SplitStream<WebSocketStream<TcpStream>>>>>,
         no_exec: bool,
+        no_transfer: bool,
     ) -> Self {
-        RxCommandHandler { passphrase, ws_sender, ws_receiver, no_exec }
+        RxCommandHandler { passphrase, ws_sender, ws_receiver, no_exec, no_transfer}
     }
 
     pub async fn handle_command(&mut self, command: NodeCommand) -> Response {
@@ -52,15 +54,30 @@ impl RxCommandHandler {
     }
 
     async fn info(&self) -> Response {
+        if self.no_exec {
+            println!("Execution of commands is disabled (--no-exec flag).");
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        }
+
         Response::Message { content: "NOT IMPLEMENTED".to_string() }
     }
 
     async fn pwd(&self) -> Response {
+        if self.no_exec {
+            println!("Execution of commands is disabled (--no-exec flag).");
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        }
+
         let current_dir = env::current_dir().unwrap();
         Response::Message { content: current_dir.display().to_string() }
     }
 
     async fn users(&self) -> Response {
+        if self.no_exec {
+            println!("Execution of commands is disabled (--no-exec flag).");
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        }
+
         let users = unsafe { all_users() };
 
         let usernames: Vec<String> = users
@@ -71,14 +88,30 @@ impl RxCommandHandler {
     }
 
     async fn netstat(&self) -> Response {
+        if self.no_exec {
+            println!("Execution of commands is disabled (--no-exec flag).");
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        }
+
         Response::Message { content: "NOT IMPLEMENTED".to_string() }
+
     }
 
     async fn network(&self) -> Response {
+        if self.no_exec {
+            println!("Execution of commands is disabled (--no-exec flag).");
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        }
+
         Response::Message { content: "NOT IMPLEMENTED".to_string() }
     }
 
     async fn whoami(&self) -> Response {
+        if self.no_exec {
+            println!("Execution of commands is disabled (--no-exec flag).");
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        }
+
         let username = env::var("USER")
             .or_else(|_| env::var("USERNAME"))
             .expect("Failed to get the current username");
@@ -88,6 +121,11 @@ impl RxCommandHandler {
 
 
     async fn list_files(&self) -> Response {
+        if self.no_exec || self.no_transfer {
+            println!("Listing files is disallowed (--no-transfer or --no-exec flag).");
+            return Response::Message { content: format!("Peer has disabled executing commands.\n") }
+        }
+
         let mut file_list = vec![];
 
         match fs::read_dir(".").await {
@@ -107,6 +145,11 @@ impl RxCommandHandler {
     }
 
     async fn download_file(&self, file_path: &str, file_local_path: &str) -> Response {
+        if self.no_transfer {
+            println!("Transfer is disallowed (--no-transfer flag).");
+            return Response::Message { content: format!("Transfer is disallowed (--no-transfer flag).\n") }
+        }
+
         match fs::read(file_path).await {
             Ok(file_data) => {
                 Response::FileData { file_path: file_local_path.to_string(), data: file_data }
@@ -119,6 +162,11 @@ impl RxCommandHandler {
     }
 
     async fn upload_file(&self, file_path: &str, file_up_path: &str, data: &[u8]) -> Response {
+        if self.no_transfer  {
+            println!("Transfer is disallowed (--no-transfer flag).");
+            return Response::Message { content: format!("Transfer is disallowed (--no-transfer flag).\n") }
+        }
+
         match fs::write(file_up_path, data).await {
             Ok(_) => Response::Message { content: format!("File {} uploaded successfully.", file_path) },
             Err(e) => {
@@ -210,5 +258,5 @@ impl RxCommandHandler {
         } else {
             None
         }
-    }
+    }    
 }

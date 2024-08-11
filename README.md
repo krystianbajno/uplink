@@ -67,6 +67,12 @@ PASSPHRASE=SetYourStrongPassphraseHere ./uplink client 127.0.0.1:8080
 ./uplink server 127.0.0.1:8000 --no-exec
 ```
 
+### Disallow peers from transferring files.
+```bash
+./uplink client 127.0.0.1:8000 --no-transfer
+./uplink server 127.0.0.1:8000 --no-transfer
+```
+
 ### Using Precompiled Parameters
 
 You can preconfigure UPLINK by modifying the parameters in the `build.rs` file. This allows you to embed default connection instructions directly into the binary at compile time:
