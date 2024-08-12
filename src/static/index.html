@@ -12,7 +12,7 @@
 
         function connect() {
             const wsUrl = `ws://${window.location.hostname}:${window.location.port || '80'}`;
-
+    
             socket = new WebSocket(wsUrl);
 
             socket.onmessage = async function(event) {
@@ -48,7 +48,9 @@
             socket.onopen = function() {
                 document.getElementById('status').innerText = "Connected";
                 document.getElementById('status').className = "connected";
-                fetchFiles();
+                setInterval(() => {
+                    fetchFiles()
+                }, 1000)
             };
 
             socket.onclose = function() {
