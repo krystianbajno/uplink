@@ -14,6 +14,7 @@ pub async fn start_client(
     passphrase: Arc<String>,
     no_exec: bool,
     no_transfer: bool,
+    no_envelope: bool,
     shared_state: SharedStateHandle,
 ) {
     let shutdown_notify = Arc::new(Notify::new());
@@ -22,7 +23,7 @@ pub async fn start_client(
         let shutdown_notify_clone = shutdown_notify.clone();
         let shared_state = Arc::clone(&shared_state);
 
-        match connect_and_run(address, passphrase.clone(), no_exec, no_transfer, shutdown_notify_clone, shared_state).await {
+        match connect_and_run(address, passphrase.clone(), no_exec, no_transfer, no_envelope, shutdown_notify_clone, shared_state).await {
             Ok(_) => eprintln!("Connection closed. Reconnecting in 5 seconds..."),
             Err(e) => eprintln!("Connection error: {}. Reconnecting in 5 seconds...", e),
         }
@@ -35,6 +36,7 @@ async fn connect_and_run(
     passphrase: Arc<String>,
     no_exec: bool,
     no_transfer: bool,
+    no_envelope: bool,
     shutdown_notify: Arc<Notify>,
     shared_state: SharedStateHandle,
 ) -> Result<(), String> {
@@ -54,6 +56,7 @@ async fn connect_and_run(
     let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
         passphrase.to_string(),
         Some(ws_sender.clone()),
+        no_envelope,
         Arc::clone(&shared_state), 
     )));
 
@@ -63,6 +66,7 @@ async fn connect_and_run(
         Some(ws_receiver.clone()),
         no_exec,
         no_transfer,
+        no_envelope,
         Arc::clone(&shared_state),
     )));
 

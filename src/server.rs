@@ -16,6 +16,7 @@ pub async fn start_server(
     passphrase: Arc<String>,
     no_exec: bool,
     no_transfer: bool,
+    no_envelope: bool,
     shared_state: SharedStateHandle,
 ) {
     let listener = TcpListener::bind(bind_addr).await.unwrap();
@@ -31,7 +32,8 @@ pub async fn start_server(
                     Arc::clone(&passphrase),
                     no_exec,
                     no_transfer,
-                    shared_state, 
+                    no_envelope,
+                    shared_state,
                 ));
             }
             Err(e) => {
@@ -46,6 +48,7 @@ async fn handle_connection(
     passphrase: Arc<String>,
     no_exec: bool,
     no_transfer: bool,
+    no_envelope: bool,
     shared_state: SharedStateHandle,
 ) {
     if communication::is_websocket_upgrade_request(&mut stream).await {
@@ -58,6 +61,7 @@ async fn handle_connection(
                 let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
                     passphrase.clone().to_string(),
                     Some(Arc::clone(&ws_sender)),
+                    no_envelope,
                     Arc::clone(&shared_state), 
                 )));
                 let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
@@ -66,6 +70,7 @@ async fn handle_connection(
                     Some(Arc::clone(&ws_receiver)),
                     no_exec,
                     no_transfer,
+                    no_envelope,
                     Arc::clone(&shared_state),
                 )));
 

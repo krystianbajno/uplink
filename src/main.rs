@@ -20,7 +20,7 @@ use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
-    let (mode, address, passphrase, no_exec, no_transfer) = get_config();
+    let (mode, address, passphrase, no_exec, no_transfer, no_envelope) = get_config();
     let passphrase = Arc::new(passphrase);
 
     let shared_state = Arc::new(Mutex::new(SharedState::new()));
@@ -28,20 +28,22 @@ async fn main() {
     match mode.as_deref() {
         Some("server") => {
             let address = address.expect("Address is required for server mode");
-            server::start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer, Arc::clone(&shared_state)).await;
+            server::start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, Arc::clone(&shared_state)).await;
         }
         Some("client") => {
             let address = address.expect("Address is required for client mode");
-            client::start_client(&address, Arc::clone(&passphrase), no_exec, no_transfer, Arc::clone(&shared_state)).await;
+            client::start_client(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, Arc::clone(&shared_state)).await;
         }
         _ => eprintln!("Invalid or missing mode. Use 'server' or 'client'"),
     }
 }
 
-fn get_config() -> (Option<String>, Option<String>, String, bool, bool) {
+fn get_config() -> (Option<String>, Option<String>, String, bool, bool, bool) {
     let precompiled_mode: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_MODE");
     let precompiled_address: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_ADDRESS");
     let precompiled_passphrase: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_PASSPHRASE");
+    let precompiled_no_envelope: Option<bool> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_NO_ENVELOPE")
+        .and_then(|s| s.parse::<bool>().ok());
 
     let args: Vec<String> = std::env::args().collect();
 
@@ -53,6 +55,9 @@ fn get_config() -> (Option<String>, Option<String>, String, bool, bool) {
         precompiled_address.map(|s| s.trim_matches('"').to_string())
     });
 
+
+    let no_envelope = args.contains(&"--no-envelope".to_string()) || precompiled_no_envelope.unwrap_or(false);
+
     let passphrase = std::env::var("PASSPHRASE")
         .or_else(|_| {
             precompiled_passphrase
@@ -62,7 +67,7 @@ fn get_config() -> (Option<String>, Option<String>, String, bool, bool) {
         .unwrap_or_else(|_| "default_passphrase".to_string());
 
     let no_exec = args.contains(&"--no-exec".to_string());
-    let no_transfer = args.contains(&"--no-transfer".to_string());
+    let no_transfer: bool = args.contains(&"--no-transfer".to_string());    
 
-    (mode, address, passphrase, no_exec, no_transfer)
+    (mode, address, passphrase, no_exec, no_transfer, no_envelope)
 }

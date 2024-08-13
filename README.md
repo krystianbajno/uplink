@@ -17,6 +17,8 @@
 
 In case the passphrase was compromised, you are safe, as long as it happened after the handshake.
 
+You can disable envelope encryption and use only AES-256-GCM channel using `--no-envelope` switch.
+
 ## Features
 
 - **Bi-Directional Communication**: Both the server and client can issue commands and receive responses, enabling seamless remote management. Yes, if you connect to the server, the server can execute commands on your computer (you can specify --no-exec flag to disallow that).
@@ -85,6 +87,12 @@ PASSPHRASE=SetYourStrongPassphraseHere ./uplink client 127.0.0.1:8080
 ```bash
 ./uplink client 127.0.0.1:8000 --no-transfer
 ./uplink server 127.0.0.1:8000 --no-transfer
+```
+
+### Disable envelope encryption and use only AES256GCM
+```bash
+./uplink client 127.0.0.1:8000 --no-envelope
+./uplink server 127.0.0.1:8000 --no-envelope
 ```
 
 ### Using Precompiled Parameters
