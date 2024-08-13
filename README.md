@@ -98,6 +98,17 @@ Compile and run:
 
 The UPLINK server includes a web interface accessible via any modern web browser.
 
+At the moment the web interface works only on AES256GCM without Envelope Encryption. Use `--no-envelope` flag.
+
+To use the browser's native crypto API, you'll need an SSL session because the API is restricted to secure contexts (haha, lol, see https://github.com/w3c/webcrypto/issues/170). A simple way to bypass this restriction is by creating a local SSH tunnel and accessing localhost, which is considered a "secure" context.
+
+Here's how you can set up the tunnel:
+```
+ssh -L 8000:localhost:<uplink-port> localhost
+```
+
+I may add SSL support in the future.
+
 ### Accessing the Web Interface
 
 1. **Start the Server**:

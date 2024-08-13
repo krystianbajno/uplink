@@ -4,13 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UPLINK Web Panel</title>
-    <script>
+    <style>
+        body {
+            margin-left: 16px;
+            margin-top: 16px;
+            background-color: #2a2a2a;
+            color: white;
+            font-family: monospace;
+        }
+        input {
+          padding: 16px;
+          width: 300px;
+          font-size: 16px;
+          background-color: #1a1a1a;
+          color: white;
+        }
+        button {
+          padding: 20px;
+          margin-left: 8px;
+          min-width: 120px;
+          background-color: #1a1a1a;
+          border: 0;
+          color: white;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 16px;
+        }
+        button:hover {
+          filter:contrast(2);
+        }
+        div {
+           margin: 16px 0 16px 0;
+        }
+        #files {
+          display: flex;
+          flex-direction: column;
+          font-size: 16px;
+        }
+        #con {
+            display: flex;
+            flex-direction: row;
+            gap: 32px;
+        }
+        a { color: lime !important; }
+        .disconnected { color: red }
+        .connected { color: lime }
+    </style>
+</head>
+<body>
+    <h1>UPLINK Web Panel</h1>
+    <pre>
+ooooo     ooo ooooooooo.   ooooo        ooooo ooooo      ooo oooo    oooo 
+`888'     `8' `888   `Y88. `888'        `888' `888b.     `8' `888   .8P'  
+ 888       8   888   .d88'  888          888   8 `88b.    8   888  d8'    
+ 888       8   888ooo88P'   888          888   8   `88b.  8   88888[      
+ 888       8   888          888          888   8     `88b.8   888`88b.    
+ `88.    .8'   888          888       o  888   8       `888   888  `88b.  
+   `YbodP'    o888o        o888ooooood8 o888o o8o        `8  o888o  o888o                                                                       
+    </pre>
+
+    <div id="con">
+        <input type="text" id="connection" placeholder="Enter address:port" oninput="updateConnection()">
+        <h2>Status: <span id="status" class="disconnected">Disconnected</span></h2>
+    </div>
+    <p>In order to connect, please enter the shared passphrase into the input below and press connect.</p>
+    <div id="auth">
+        <input type="text" id="passphrase" placeholder="Enter passphrase" oninput="updatePassphrase()">
+        <button onclick="connect()">Connect</button>
+    </div>
+    <div id="upload">
+        <input type="file" id="fileInput">
+        <button onclick="uploadFile()">Upload</button>
+    </div>
+    <div id="download">
+        <h2>Files</h2>
+        <div id="files"></div>
+    </div>
+    <div id="exec">
+        <input type="text" id="commandInput" placeholder="Enter command">
+        <button onclick="sendCommand('Execute', { command: document.getElementById('commandInput').value })">Send Command</button>
+    </div>
+    <div>
+        <h2>Server message:</h2>
+        <pre id="output"></pre>
+    </div>
+
+    <script defer>
         let socket;
         let passphrase = '';
 
-        function connect() {
-            const wsUrl = `ws://${window.location.hostname}:${window.location.port || '80'}`;
+        let wsUrl = `ws://${window.location.hostname}:${window.location.port || '80'}`;
+        document.getElementById("connection").value = `${window.location.hostname}:${window.location.port || '80'}`;
 
+        function updateConnection() {
+            const connectionValue = document.getElementById('connection').value;
+            wsUrl = `ws://${connectionValue}`;
+        }
+
+        function updatePassphrase() {
+            passphrase = document.getElementById('passphrase').value;
+        }
+
+        function connect() {
             socket = new WebSocket(wsUrl);
 
             socket.onmessage = async function(event) {
@@ -222,6 +317,7 @@
                 }
             });
         }
+
         function decompressData(data) {
             return new Promise(async (resolve, reject) => {
                 try {
@@ -246,85 +342,6 @@
                 }
             });
         }
-
-        function updatePassphrase() {
-            passphrase = document.getElementById('passphrase').value;
-        }
     </script>
-    <style>
-        body {
-            margin-left: 16px;
-            margin-top: 16px;
-            background-color: #2a2a2a;
-            color: white;
-            font-family: monospace;
-        }
-        input {
-          padding: 16px;
-          width: 300px;
-          font-size: 16px;
-          background-color: #1a1a1a;
-          color: white;
-        }
-        button {
-          padding: 20px;
-          margin-left: 8px;
-          min-width: 120px;
-          background-color: #1a1a1a;
-          border: 0;
-          color: white;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 16px;
-        }
-        button:hover {
-          filter:contrast(2);
-        }
-        div {
-           margin: 16px 0 16px 0;
-        }
-        #files {
-          display: flex;
-          flex-direction: column;
-          font-size: 16px;
-        }
-        a { color: lime !important; }
-        .disconnected { color: red }
-        .connected { color: lime }
-    </style>
-</head>
-<body>
-    <h1>UPLINK Web Panel</h1>
-    <pre>
-ooooo     ooo ooooooooo.   ooooo        ooooo ooooo      ooo oooo    oooo 
-`888'     `8' `888   `Y88. `888'        `888' `888b.     `8' `888   .8P'  
- 888       8   888   .d88'  888          888   8 `88b.    8   888  d8'    
- 888       8   888ooo88P'   888          888   8   `88b.  8   88888[      
- 888       8   888          888          888   8     `88b.8   888`88b.    
- `88.    .8'   888          888       o  888   8       `888   888  `88b.  
-   `YbodP'    o888o        o888ooooood8 o888o o8o        `8  o888o  o888o                                                                       
-    </pre>
-    <h2>Status: <span id="status" class="disconnected">Disconnected</span></h2>
-    <p>In order to connect, please enter the shared passphrase into the input below and press connect.
-    <div id="auth">
-        <input type="text" id="passphrase" placeholder="Enter passphrase" oninput="updatePassphrase()">
-        <button onclick="connect()">Connect</button>
-    </div>
-    <div id="upload">
-        <input type="file" id="fileInput">
-        <button onclick="uploadFile()">Upload</button>
-    </div>
-    <div id="download">
-        <h2>Files</h2>
-        <div id="files"></div>
-    </div>
-    <div id="exec">
-        <input type="text" id="commandInput" placeholder="Enter command">
-        <button onclick="sendCommand('Execute', { command: document.getElementById('commandInput').value })">Send Command</button>
-    </div>
-    <div>
-        <h2>Server message:</h2>
-        <pre id="output"></pre>
-    </div>
 </body>
 </html>
