@@ -130,3 +130,9 @@ I may add SSL support in the future.
    Use the file input to select a file and click "Upload" to securely transfer the file to the server.
 4. **Download a file**:  
    The files in current working directory are listed. Click on them to download them.
+
+   ### 
+   TODO:
+   - Refac
+   - Add CONNECT and PROXY
+   - More protocols to switch with WebSockets (eg. QUIC, RTSP, WebRTC)
