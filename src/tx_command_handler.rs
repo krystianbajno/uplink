@@ -134,7 +134,6 @@ impl TxCommandHandler {
         };
     
         if let (Some(public_key), Some(session_key)) = (public_key, session_key) {
-            println!("[+] Creating encrypted envelope");
 
             let envelope = Envelope::create_encrypted_envelope(
                 &public_key, 
@@ -143,13 +142,12 @@ impl TxCommandHandler {
             );
 
             let serialized_envelope = envelope.to_bytes();
-            println!("[+] Encrypting and compressing");
 
             let encrypted_envelope = communication::prepare_tx(serialized_envelope, &self.passphrase);
     
             if let Some(ws_sender) = &self.ws_sender {
                 let mut sender = ws_sender.lock().await;
-                println!("[-*-] Sending");
+                println!("[*] Sending command");
 
                 if let Err(e) = communication::send_binary_data(&mut sender, encrypted_envelope).await {
                     eprintln!("Failed to send encrypted envelope: {}", e);

@@ -227,13 +227,10 @@ impl RxCommandHandler {
                     shared_state.session_key.clone()
                 };
 
-                println!("[+] Compressing and encrypting response");
-
                 let mut communication_data = communication::prepare_tx(serialized_response, &self.passphrase);
 
                 if let Some(session_key) = session_key {
 
-                    println!("[+] Encrypting with session key");
                     communication_data = crypto::encrypt(&communication_data, &session_key)
                 }
 
@@ -271,13 +268,12 @@ impl RxCommandHandler {
 
             decrypted_command
         };
-        println!("[__] Command decrypted");
         serde_json::from_slice(&decrypted_command).expect("Failed to deserialize command")
     }
     
     pub async fn handle_rx(&mut self) {
         while let Some(message) = self.get_next_message().await {
-            println!("\n[-+-] Received message\n");
+            println!("\n[+] Received message\n");
             match message {
                 Ok(Message::Binary(data)) => {
                     let decrypted_communications = self.decrypt_incoming_message(&data).await;
@@ -303,24 +299,18 @@ impl RxCommandHandler {
         let decrypted_data = data.to_vec();
     
         if let Some(session_key) = &shared_state.session_key {
-            println!("[_] Attempting to decrypt with session key...");
             match crypto::decrypt(&decrypted_data, session_key) {
                 Ok(decrypted) => {
-                    println!("[_] Decryption with session key succeeded.");
                     return communication::prepare_rx(decrypted, &self.passphrase)
                 }
-                Err(e) => {
-                    println!("[_] Decryption with session key failed: {:?}", e);
-                }
+                Err(_e) => {}
             }
         }
     
-        println!("[+] Decrypting and decompressing with passphrase");
         communication::prepare_rx(decrypted_data, &self.passphrase)
     }
 
     async fn process_decrypted_data(&mut self, decrypted_data: Vec<u8>) {
-        println!("[_] Processing decrypted data");
         if let Ok(envelope) = serde_json::from_slice::<Envelope>(&decrypted_data) {
             let command = self.decrypt_envelope(envelope).await;
             let response = self.handle_command(command).await;

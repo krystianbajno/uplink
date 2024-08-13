@@ -6,7 +6,7 @@ use crate::crypto::generate_session_key;
 
 pub async fn process_response(response: Response, shared_state: &SharedStateHandle) {
     match response {
-        Response::Message { content } => println!("[*] Received message:\n{}\n", content),
+        Response::Message { content } => println!("\n{}\n", content),
         Response::FileList { files } => {
             for file in files {
                 println!("{}", file);
