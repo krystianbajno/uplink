@@ -104,7 +104,7 @@ To use the browser's native crypto API, you'll need an SSL session because the A
 
 Here's how you can set up the tunnel:
 ```
-ssh -L 8000:localhost:<uplink-port> localhost
+ssh -L 8000:<uplink-addr>:<uplink-port> localhost
 ```
 
 I may add SSL support in the future.
