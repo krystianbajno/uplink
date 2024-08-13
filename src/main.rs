@@ -10,26 +10,34 @@ mod command;
 mod communication;
 mod crypto;
 mod compression;
+mod envelope;
+mod shared_state;
 
 use std::sync::Arc;
+
+use shared_state::SharedState;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
     let (mode, address, passphrase, no_exec, no_transfer) = get_config();
     let passphrase = Arc::new(passphrase);
 
+    let shared_state = Arc::new(Mutex::new(SharedState::new()));
+
     match mode.as_deref() {
         Some("server") => {
             let address = address.expect("Address is required for server mode");
-            server::start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer).await;
+            server::start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer, Arc::clone(&shared_state)).await;
         }
         Some("client") => {
             let address = address.expect("Address is required for client mode");
-            client::start_client(&address, Arc::clone(&passphrase), no_exec, no_transfer).await;
+            client::start_client(&address, Arc::clone(&passphrase), no_exec, no_transfer, Arc::clone(&shared_state)).await;
         }
         _ => eprintln!("Invalid or missing mode. Use 'server' or 'client'"),
     }
 }
+
 fn get_config() -> (Option<String>, Option<String>, String, bool, bool) {
     let precompiled_mode: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_MODE");
     let precompiled_address: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_ADDRESS");

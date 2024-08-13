@@ -8,11 +8,13 @@ use crate::compression;
 
 pub fn prepare_tx(data: Vec<u8>, passphrase: &str) -> Vec<u8> {
     let compressed_data = compression::compress(&data);
-    crypto::encrypt(&compressed_data, passphrase.as_bytes())
+    let key = crypto::derive_key(passphrase.as_bytes());
+    crypto::encrypt(&compressed_data, &key)
 }
 
 pub fn prepare_rx(data: Vec<u8>, passphrase: &str) -> Vec<u8> {
-    let decrypted_data = crypto::decrypt(&data, passphrase.as_bytes());
+    let key = crypto::derive_key(passphrase.as_bytes());
+    let decrypted_data = crypto::decrypt(&data, &key).unwrap();
     compression::decompress(&decrypted_data)
 }
 

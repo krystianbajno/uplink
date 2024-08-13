@@ -4,24 +4,34 @@ use std::sync::Arc;
 use crate::io::handle_cli;
 use crate::rx_command_handler::RxCommandHandler;
 use crate::tx_command_handler::TxCommandHandler;
+use crate::shared_state::SharedStateHandle;
 use tokio_tungstenite::accept_async;
 use futures_util::stream::StreamExt;
 use crate::communication;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
-pub async fn start_server(bind_addr: &str, passphrase: Arc<String>, no_exec: bool, no_transfer: bool) {
+pub async fn start_server(
+    bind_addr: &str,
+    passphrase: Arc<String>,
+    no_exec: bool,
+    no_transfer: bool,
+    shared_state: SharedStateHandle,
+) {
     let listener = TcpListener::bind(bind_addr).await.unwrap();
     println!("Server listening on {}", bind_addr);
 
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {
+                let shared_state = Arc::clone(&shared_state);
+
                 tokio::spawn(handle_connection(
                     stream,
                     Arc::clone(&passphrase),
                     no_exec,
                     no_transfer,
+                    shared_state, 
                 ));
             }
             Err(e) => {
@@ -36,6 +46,7 @@ async fn handle_connection(
     passphrase: Arc<String>,
     no_exec: bool,
     no_transfer: bool,
+    shared_state: SharedStateHandle,
 ) {
     if communication::is_websocket_upgrade_request(&mut stream).await {
         match accept_async(stream).await {
@@ -47,6 +58,7 @@ async fn handle_connection(
                 let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
                     passphrase.clone().to_string(),
                     Some(Arc::clone(&ws_sender)),
+                    Arc::clone(&shared_state), 
                 )));
                 let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
                     passphrase.clone().to_string(),
@@ -54,6 +66,7 @@ async fn handle_connection(
                     Some(Arc::clone(&ws_receiver)),
                     no_exec,
                     no_transfer,
+                    Arc::clone(&shared_state),
                 )));
 
                 tokio::spawn(handle_cli(Arc::clone(&tx_command_handler)));

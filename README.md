@@ -4,13 +4,26 @@
 
 **UPLINK** is a Rust cross-platform tool for file transfer and remote management that uses AES-256-GCM encryption over WebSockets. It provides robust, real-time communication between clients and servers, allowing for command execution, file transfers, and system management through both command-line and web interface.
 
+## Crypto description
+0. Shared passphrase is used to establish a secure AES-256-GCM channel.
+1. Client sends a handshake message to the server.
+2. Server responds with public key.
+3. Client generates a symmetric session key and encrypts it with public key. Client saves the symmetric session key in state.
+4. Client sends an envelope with command to the server. The envelope consists of: { encrypted_symmetric_key, symmetric_key_encrypted_message }.
+5. Server receives the envelope and decrypts symmetric session key with private key.
+6. Server decrypts the command with symmetric session key.
+7. Server executes the command and responds with response encrypted with symmetric_session_key over AES-256-GCM channel.
+8. Client receives a response and decrypts it with symmetric_session_key, passphrase, and decompresses the output.
+
+In case the passphrase was compromised, you are safe, as long as it happened after the handshake.
+
 ## Features
 
 - **Bi-Directional Communication**: Both the server and client can issue commands and receive responses, enabling seamless remote management. Yes, if you connect to the server, the server can execute commands on your computer (you can specify --no-exec flag to disallow that).
 - **Secure File Transfers**: Upload and download files with ease.
 - **Remote Command Execution**: Execute shell commands on the remote server or client, providing powerful control over connected systems.
 - **Web Interface**: Manage files, issue commands, and update passphrases directly from a browser-based interface, enhancing accessibility and ease of use.
-- **Encryption**: All communications are secured using AES-256-GCM encryption to ensure data confidentiality and integrity. Hide from Blue Team with ease.
+- **Encryption**: All communications are secured using AES-256-GCM encryption Hide from Blue Team with ease.
 - **Compression**: Data is compressed using gzip before encryption, optimizing transmission speed and reducing bandwidth usage.
 
 ## Installation

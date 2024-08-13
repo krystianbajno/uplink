@@ -17,7 +17,7 @@ pub async fn handle_cli(command_handler: Arc<Mutex<TxCommandHandler>>) {
                     continue;
                 }
 
-                let handler = command_handler.lock().await;
+                let mut handler = command_handler.lock().await;
                 if handler.is_connection_active().await {
                     handler.handle_command(command).await;
                 } else {

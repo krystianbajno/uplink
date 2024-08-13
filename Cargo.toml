@@ -20,3 +20,5 @@ url = "2.2"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio-stream = "0.1"
+rsa = "0.9.6" 
+pem = "3.0.4"

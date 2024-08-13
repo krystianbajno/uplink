@@ -7,13 +7,22 @@ use tokio::time::{sleep, Duration};
 use crate::rx_command_handler::RxCommandHandler;
 use crate::tx_command_handler::TxCommandHandler;
 use crate::io::handle_cli;
+use crate::shared_state::SharedStateHandle;
 
-pub async fn start_client(address: &str, passphrase: Arc<String>, no_exec: bool, no_transfer: bool) {
+pub async fn start_client(
+    address: &str,
+    passphrase: Arc<String>,
+    no_exec: bool,
+    no_transfer: bool,
+    shared_state: SharedStateHandle,
+) {
     let shutdown_notify = Arc::new(Notify::new());
 
     loop {
         let shutdown_notify_clone = shutdown_notify.clone();
-        match connect_and_run(address, passphrase.clone(), no_exec, no_transfer, shutdown_notify_clone).await {
+        let shared_state = Arc::clone(&shared_state);
+
+        match connect_and_run(address, passphrase.clone(), no_exec, no_transfer, shutdown_notify_clone, shared_state).await {
             Ok(_) => eprintln!("Connection closed. Reconnecting in 5 seconds..."),
             Err(e) => eprintln!("Connection error: {}. Reconnecting in 5 seconds...", e),
         }
@@ -27,6 +36,7 @@ async fn connect_and_run(
     no_exec: bool,
     no_transfer: bool,
     shutdown_notify: Arc<Notify>,
+    shared_state: SharedStateHandle,
 ) -> Result<(), String> {
     let tcp_stream = TcpStream::connect(address)
         .await
@@ -44,6 +54,7 @@ async fn connect_and_run(
     let tx_command_handler = Arc::new(Mutex::new(TxCommandHandler::new(
         passphrase.to_string(),
         Some(ws_sender.clone()),
+        Arc::clone(&shared_state), 
     )));
 
     let rx_command_handler = Arc::new(Mutex::new(RxCommandHandler::new(
@@ -52,6 +63,7 @@ async fn connect_and_run(
         Some(ws_receiver.clone()),
         no_exec,
         no_transfer,
+        Arc::clone(&shared_state),
     )));
 
     let rx_task = tokio::spawn({
