@@ -3,18 +3,18 @@ use tokio::net::TcpStream;
 use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::protocol::Message;
 use futures_util::sink::SinkExt;
-use crate::crypto;
-use crate::compression;
+use crate::crypto::aes;
+use crate::transport::compression;
 
 pub fn prepare_tx(data: Vec<u8>, passphrase: &str) -> Vec<u8> {
     let compressed_data = compression::compress(&data);
-    let key = crypto::derive_key(passphrase.as_bytes());
-    crypto::encrypt(&compressed_data, &key)
+    let key = aes::derive_key(passphrase.as_bytes());
+    aes::encrypt(&compressed_data, &key)
 }
 
 pub fn prepare_rx(data: Vec<u8>, passphrase: &str) -> Vec<u8> {
-    let key = crypto::derive_key(passphrase.as_bytes());
-    let decrypted_data = crypto::decrypt(&data, &key).unwrap();
+    let key = aes::derive_key(passphrase.as_bytes());
+    let decrypted_data = aes::decrypt(&data, &key).unwrap();
     compression::decompress(&decrypted_data)
 }
 

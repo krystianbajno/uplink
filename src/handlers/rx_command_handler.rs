@@ -2,6 +2,7 @@ use std::env;
 use std::sync::Arc;
 use futures_util::stream::{SplitSink, SplitStream, StreamExt};
 use rsa::pkcs1::EncodeRsaPublicKey;
+
 use tokio::fs;
 use tokio::net::TcpStream;
 use tokio::process::Command;
@@ -9,11 +10,13 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use users::all_users;
-use crate::{communication, crypto};
-use crate::command::{Command as NodeCommand, Response};
-use crate::response_handler::process_response;
-use crate::envelope::Envelope;
-use crate::shared_state::SharedState;
+use crate::transport::communication;
+
+use crate::enums::command::Command as NodeCommand;
+use crate::enums::response::Response;
+use crate::handlers::response_handler::process_response;
+use crate::crypto::envelope::Envelope;
+use crate::shared_state::shared_state::SharedState;
 
 pub struct RxCommandHandler {
     passphrase: String,
@@ -207,7 +210,7 @@ impl RxCommandHandler {
         };
 
         if let Some(session_key) = session_key {
-            communication_data = crypto::encrypt(&communication_data, &session_key);
+            communication_data = crate::crypto::aes::encrypt(&communication_data, &session_key);
         }
 
         communication_data
@@ -253,7 +256,7 @@ impl RxCommandHandler {
             communication::prepare_rx(decrypted_data, &self.passphrase)
         } else {
             if let Some(session_key) = &shared_state.session_key {
-                if let Ok(decrypted) = crypto::decrypt(&decrypted_data, session_key) {
+                if let Ok(decrypted) = crate::crypto::aes::decrypt(&decrypted_data, session_key) {
                     return communication::prepare_rx(decrypted, &self.passphrase);
                 }
             }

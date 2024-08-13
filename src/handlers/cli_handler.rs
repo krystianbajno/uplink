@@ -1,5 +1,5 @@
 use tokio::sync::Mutex;
-use crate::tx_command_handler::TxCommandHandler;
+use crate::handlers::tx_command_handler::TxCommandHandler;
 use tokio::io::{self, AsyncBufReadExt};
 use std::sync::Arc;
 

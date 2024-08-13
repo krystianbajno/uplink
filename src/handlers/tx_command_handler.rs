@@ -5,11 +5,11 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
-use crate::communication;
-use crate::command::Command as NodeCommand;
-use crate::envelope::Envelope;
+use crate::transport::communication;
+use crate::enums::command::Command as NodeCommand;
+use crate::crypto::envelope::Envelope;
 use indoc::indoc;
-use crate::shared_state::SharedState;
+use crate::shared_state::shared_state::SharedState;
 use rsa::RsaPublicKey;
 
 pub struct TxCommandHandler {

@@ -1,13 +1,13 @@
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use std::sync::Arc;
-use crate::io::handle_cli;
-use crate::rx_command_handler::RxCommandHandler;
-use crate::tx_command_handler::TxCommandHandler;
-use crate::shared_state::SharedStateHandle;
+use crate::handlers::cli_handler::handle_cli;
+use crate::handlers::rx_command_handler::RxCommandHandler;
+use crate::handlers::tx_command_handler::TxCommandHandler;
+use crate::shared_state::shared_state::SharedStateHandle;
 use tokio_tungstenite::accept_async;
 use futures_util::stream::StreamExt;
-use crate::communication;
+use crate::transport::communication;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
@@ -97,7 +97,7 @@ async fn handle_connection(
 pub async fn handle_http_request(mut stream: TcpStream) {
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}",
-        include_str!("static/index.html")
+        include_str!("../static/index.html")
     );
     
     if let Err(e) = stream.write_all(response.as_bytes()).await {

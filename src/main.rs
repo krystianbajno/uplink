@@ -1,22 +1,18 @@
-mod client;
-mod server; 
+mod uplink_client;
+mod uplink_server; 
 
-mod rx_command_handler;
-mod tx_command_handler;
-
-mod io;
-mod response_handler;
-mod command;
-mod communication;
-mod crypto;
-mod compression;
-mod envelope;
 mod shared_state;
+mod crypto;
+mod transport;
+mod enums;
+mod handlers;
 
 use std::sync::Arc;
 
-use shared_state::SharedState;
 use tokio::sync::Mutex;
+use uplink_server::uplink_server::start_server;
+use uplink_client::uplink_client::start_client;
+use shared_state::shared_state::SharedState;
 
 #[tokio::main]
 async fn main() {
@@ -28,11 +24,11 @@ async fn main() {
     match mode.as_deref() {
         Some("server") => {
             let address = address.expect("Address is required for server mode");
-            server::start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, Arc::clone(&shared_state)).await;
+            start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, Arc::clone(&shared_state)).await;
         }
         Some("client") => {
             let address = address.expect("Address is required for client mode");
-            client::start_client(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, Arc::clone(&shared_state)).await;
+            start_client(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, Arc::clone(&shared_state)).await;
         }
         _ => eprintln!("Invalid or missing mode. Use 'server' or 'client'"),
     }

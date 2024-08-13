@@ -3,8 +3,6 @@ use rsa::pkcs1v15::Pkcs1v15Encrypt;
 use rand::rngs::OsRng;
 use serde::{Serialize, Deserialize};
 
-use crate::crypto;
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Envelope {
     pub encrypted_session_key: Vec<u8>,
@@ -39,13 +37,13 @@ impl Envelope {
 
     pub fn create_encrypted_envelope(public_key: &RsaPublicKey, command: &[u8], session_key: &[u8]) -> Envelope {
         let encrypted_session_key = Self::encrypt_session_key(public_key, &session_key);
-        let encrypted_command = crypto::encrypt(command, &session_key);
+        let encrypted_command = crate::crypto::aes::encrypt(command, &session_key);
         Envelope::new(encrypted_session_key, encrypted_command)
     }
 
     pub fn decrypt_envelope(private_key: &RsaPrivateKey, envelope: Envelope) -> (Vec<u8>, Vec<u8>) {
         let session_key = Self::decrypt_session_key(private_key, &envelope.encrypted_session_key);
-        let decrypted_command = crypto::decrypt(&envelope.encrypted_command, &session_key).unwrap();
+        let decrypted_command = crate::crypto::aes::decrypt(&envelope.encrypted_command, &session_key).unwrap();
         (session_key, decrypted_command)
     }
 

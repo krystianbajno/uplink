@@ -4,10 +4,10 @@ use futures_util::stream::StreamExt;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::{sleep, Duration};
-use crate::rx_command_handler::RxCommandHandler;
-use crate::tx_command_handler::TxCommandHandler;
-use crate::io::handle_cli;
-use crate::shared_state::SharedStateHandle;
+use crate::handlers::rx_command_handler::RxCommandHandler;
+use crate::handlers::tx_command_handler::TxCommandHandler;
+use crate::handlers::cli_handler::handle_cli;
+use crate::shared_state::shared_state::SharedStateHandle;
 
 pub async fn start_client(
     address: &str,

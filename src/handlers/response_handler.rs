@@ -1,8 +1,8 @@
-use crate::command::Response;
+use crate::enums::response::Response;
 use tokio::fs;
 use rsa::{pkcs1::DecodeRsaPublicKey, RsaPublicKey};
-use crate::shared_state::SharedStateHandle;
-use crate::crypto::generate_session_key;
+use crate::shared_state::shared_state::SharedStateHandle;
+use crate::crypto::aes::generate_session_key;
 
 pub async fn process_response(response: Response, shared_state: &SharedStateHandle) {
     match response {
