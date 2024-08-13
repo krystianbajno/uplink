@@ -5,9 +5,9 @@
 **UPLINK** is a Rust cross-platform tool for file transfer and remote management that uses AES-256-GCM and Envelope Encryption over WebSockets. It provides communication between clients and servers, allowing for command execution, file transfers, and system management through both command-line and web interface. Both server and client can issue commands to each other.
 
 You can disable envelope encryption and use only AES-256-GCM channel using `--no-envelope` switch.
-You can disable envelope encryption and use only AES-256-GCM channel using `--no-envelope` switch.
 
 You can disallow peers from executing commands using `--no-exec` switch.
+
 You can disallow peers from transferring files using `--no-transfer` switch.
 
 ## Installation
