@@ -15,8 +15,6 @@
 7. Server executes the command and responds with response encrypted with symmetric_session_key over AES-256-GCM channel.
 8. Client receives a response and decrypts it with symmetric_session_key, passphrase, and decompresses the output.
 
-In case the passphrase was compromised, you are safe, as long as it happened after the handshake.
-
 You can disable envelope encryption and use only AES-256-GCM channel using `--no-envelope` switch.
 
 ## Features
