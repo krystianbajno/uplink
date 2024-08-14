@@ -9,6 +9,8 @@ You can disallow peers from executing commands using `--no-exec` switch.
 
 You can disallow peers from transferring files using `--no-transfer` switch.
 
+You can disable HTTP GUI server using `--no-http` switch.
+
 ## Installation
 
 To compile UPLINK, follow these steps:
@@ -74,6 +76,11 @@ PASSPHRASE=SetYourStrongPassphraseHere ./uplink client 127.0.0.1:8080
 ```bash
 ./uplink client 127.0.0.1:8000 --no-envelope
 ./uplink server 127.0.0.1:8000 --no-envelope
+```
+
+### Disable HTTP server
+```bash
+./uplink server 127.0.0.1:8000 --no-http
 ```
 
 ### Using Precompiled Parameters

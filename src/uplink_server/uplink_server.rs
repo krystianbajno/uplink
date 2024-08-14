@@ -17,6 +17,7 @@ pub async fn start_server(
     no_exec: bool,
     no_transfer: bool,
     no_envelope: bool,
+    no_http: bool,
     shared_state: SharedStateHandle,
 ) {
     let listener = TcpListener::bind(bind_addr).await.unwrap();
@@ -33,6 +34,7 @@ pub async fn start_server(
                     no_exec,
                     no_transfer,
                     no_envelope,
+                    no_http,
                     shared_state,
                 ));
             }
@@ -49,6 +51,7 @@ async fn handle_connection(
     no_exec: bool,
     no_transfer: bool,
     no_envelope: bool,
+    no_http: bool,
     shared_state: SharedStateHandle,
 ) {
     if communication::is_websocket_upgrade_request(&mut stream).await {
@@ -90,7 +93,9 @@ async fn handle_connection(
             }
         }
     } else {
-        handle_http_request(stream).await;
+        if !no_http {
+            handle_http_request(stream).await;
+        }
     }
 }
 
