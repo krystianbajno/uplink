@@ -119,7 +119,7 @@ To use the browser's crypto API, you'll need an SSL session. A simple way to byp
 ssh -L 8000:<uplink-addr>:<uplink-port> localhost
 ```
 
-**There is a reason why API developers disabled the crypto over insecured contexts. If somebody is eavesdropping on the network and hijacks the Server's HTTP response with a website, then it is possible to inject malicious code sniffing out the PASSPHRASE out of the webpage content. Setting up the GUI locally or ideally using the CLI client is much safer in this regard.**
+**There is a reason why API developers disabled the crypto over insecured contexts. If somebody is eavesdropping on the network and hijacks the Server's HTTP response with a website, then it is possible to inject malicious code sniffing out the PASSPHRASE out of the webpage content. Setting up the GUI locally or ideally using the CLI client is much safer in this regard. I may add the TLS support in the future.**
 
 ### Accessing the Web Interface
 
