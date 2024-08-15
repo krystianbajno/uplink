@@ -156,3 +156,6 @@ Go to http://localhost:8000.
 - Add TLS for web
 - Add plain HTTPS server for IWR/wget/curl scenarios
 - Inject into random process and die
+- Key collection
+- Screen grab
+- Mic grab
