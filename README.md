@@ -153,3 +153,5 @@ Go to http://localhost:8000.
 ### TODO:
 - Add CONNECT and PROXY support
 - Support more protocols like QUIC, RTSP, WebRTC
+- Add TLS for web
+- Add plain HTTPS server for IWR/wget/curl scenarios
