@@ -1,7 +1,7 @@
 # UPLINK
 ![UPLINK](https://raw.githubusercontent.com/krystianbajno/krystianbajno/main/img/uplink.png)
 
-**UPLINK** is a Rust-based tool for file transfer and remote management. It uses AES-GCM and Envelope Encryption over WebSockets. UPLINK supports command execution, file transfers, and system management via command-line and web interfaces. Both server and client can issue commands to each other.
+**UPLINK** is a Rust-based tool for file transfer and remote management. It uses AES-GCM and Envelope Encryption over WebSockets. UPLINK supports command execution, file transfers, and system management via command-line and web interface. Both server and client can issue commands to each other.
 
 When one of the peers sends a command in envelope encryption mode:
 1. Alice establishes an AES-GCM channel with Bob using pre-shared passphrase (key derived using HKDF). AES-GCM is a means of Alice authentication and channel encryption.
