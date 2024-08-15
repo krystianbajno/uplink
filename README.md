@@ -1,5 +1,3 @@
-**Disclaimer**: You are free to use this tool for legitimate administrative purposes, provided you have proper authorization. Unauthorized access to networks or systems is illegal and unethical. I am not responsible for any actions you take. Use this tool responsibly and ensure you have the necessary permissions before proceeding.
-
 # UPLINK
 ![UPLINK](https://raw.githubusercontent.com/krystianbajno/krystianbajno/main/img/uplink.png)
 
