@@ -1,7 +1,16 @@
 # UPLINK
 ![UPLINK](https://raw.githubusercontent.com/krystianbajno/krystianbajno/main/img/uplink.png)
 
-**UPLINK** is a Rust-based tool for file transfer and remote management. It uses AES-GCM encryption over WebSockets. UPLINK supports command execution, file transfers, and system management via command-line and web interfaces. Both server and client can issue commands to each other.
+**UPLINK** is a Rust-based tool for file transfer and remote management. It uses AES-GCM and Envelope Encryption over WebSockets. UPLINK supports command execution, file transfers, and system management via command-line and web interfaces. Both server and client can issue commands to each other.
+
+When one of the peers sends a command in envelope encryption mode:
+1. Alice establishes an AES-GCM channel with Bob using pre-shared passphrase (key derived using HKDF). AES-GCM is a means of Alice authentication and channel encryption.
+2. Alice sends HANDSHAKE command.
+3. Bob generates and responds with Public Key.
+4. Alice generates Session Key and encrypts it with Bob's Public Key.
+5. Alice sends Envelope with a Command and encrypted Session Key inside - { PublicKey-Encrypted Session Key; SessionKey-Encrypted Command }. Communication stays on a protected AES-GCM channel.
+6. Bob receives the Envelope and decrypts Session Key using his Private Key, then decrypts Command using the Session Key.
+7. Bob responds to Alice with SessionKey-Encrypted message, under the AES-GCM channel.
 
 ## Security Options
 
@@ -99,7 +108,7 @@ Compile and run preconfigured:
 ```
 
 ## Web Interface
-The UPLINK server includes a web interface accessible via any modern web browser. The web interface works only with AES-256-GCM encryption without envelope encryption. Use `--no-envelope` flag.
+The UPLINK server includes a web interface accessible via any modern web browser. The web interface works only with AES-GCM encryption without envelope encryption. Use `--no-envelope` flag.
 
 To use the browser's crypto API, you'll need an SSL session. A simple way to bypass this restriction is by creating a local SSH tunnel:
 ```bash
