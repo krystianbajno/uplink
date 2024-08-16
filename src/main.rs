@@ -22,8 +22,7 @@ async fn main() {
         passphrase, 
         no_exec,
         no_transfer, 
-        no_envelope, 
-        no_http
+        no_envelope
     ) = get_config();
 
     let passphrase = Arc::new(passphrase);
@@ -33,7 +32,7 @@ async fn main() {
     match mode.as_deref() {
         Some("server") => {
             let address = address.expect("Address is required for server mode");
-            start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, no_http, Arc::clone(&shared_state)).await;
+            start_server(&address, Arc::clone(&passphrase), no_exec, no_transfer, no_envelope, Arc::clone(&shared_state)).await;
         }
         Some("client") => {
             let address = address.expect("Address is required for client mode");
@@ -43,13 +42,11 @@ async fn main() {
     }
 }
 
-fn get_config() -> (Option<String>, Option<String>, String, bool, bool, bool, bool) {
+fn get_config() -> (Option<String>, Option<String>, String, bool, bool, bool) {
     let precompiled_mode: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_MODE");
     let precompiled_address: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_ADDRESS");
     let precompiled_passphrase: Option<&str> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_PASSPHRASE");
     let precompiled_no_envelope: Option<bool> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_NO_ENVELOPE")
-        .and_then(|s| s.parse::<bool>().ok());
-    let precompiled_no_http: Option<bool> = option_env!("CARGO_PKG_METADATA_PRECOMPILED_NO_HTTP")
         .and_then(|s| s.parse::<bool>().ok());
 
     let args: Vec<String> = std::env::args().collect();
@@ -63,7 +60,6 @@ fn get_config() -> (Option<String>, Option<String>, String, bool, bool, bool, bo
     });
 
     let no_envelope = args.contains(&"--no-envelope".to_string()) || precompiled_no_envelope.unwrap_or(false);
-    let no_http = args.contains(&"--no-http".to_string()) || precompiled_no_http.unwrap_or(false);
 
     let passphrase = std::env::var("PASSPHRASE")
         .or_else(|_| {
@@ -76,5 +72,5 @@ fn get_config() -> (Option<String>, Option<String>, String, bool, bool, bool, bo
     let no_exec = args.contains(&"--no-exec".to_string());
     let no_transfer: bool = args.contains(&"--no-transfer".to_string());    
 
-    (mode, address, passphrase, no_exec, no_transfer, no_envelope, no_http)
+    (mode, address, passphrase, no_exec, no_transfer, no_envelope)
 }

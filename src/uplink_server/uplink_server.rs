@@ -8,7 +8,6 @@ use crate::shared_state::shared_state::SharedStateHandle;
 use tokio_tungstenite::accept_async;
 use futures_util::stream::StreamExt;
 use crate::transport::communication;
-use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
 pub async fn start_server(
@@ -17,7 +16,6 @@ pub async fn start_server(
     no_exec: bool,
     no_transfer: bool,
     no_envelope: bool,
-    no_http: bool,
     shared_state: SharedStateHandle,
 ) {
     let listener = TcpListener::bind(bind_addr).await.unwrap();
@@ -34,7 +32,6 @@ pub async fn start_server(
                     no_exec,
                     no_transfer,
                     no_envelope,
-                    no_http,
                     shared_state,
                 ));
             }
@@ -51,7 +48,6 @@ async fn handle_connection(
     no_exec: bool,
     no_transfer: bool,
     no_envelope: bool,
-    no_http: bool,
     shared_state: SharedStateHandle,
 ) {
     if communication::is_websocket_upgrade_request(&mut stream).await {
@@ -92,24 +88,5 @@ async fn handle_connection(
                 eprintln!("WebSocket handshake failed: {:?}", e);
             }
         }
-    } else {
-        if !no_http {
-            handle_http_request(stream).await;
-        }
-    }
-}
-
-pub async fn handle_http_request(mut stream: TcpStream) {
-    let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}",
-        include_str!("../static/index.html")
-    );
-    
-    if let Err(e) = stream.write_all(response.as_bytes()).await {
-        eprintln!("Failed to write HTTP response: {}", e);
-    }
-
-    if let Err(e) = stream.flush().await {
-        eprintln!("Failed to flush HTTP response: {}", e);
     }
 }
