@@ -1,5 +1,4 @@
 # UPLINK
-![UPLINK](https://raw.githubusercontent.com/krystianbajno/krystianbajno/main/img/uplink.png)
 
 **UPLINK** is a Rust-based tool for file transfer and remote management. It uses AES-GCM and Envelope Encryption over WebSockets. UPLINK supports command execution, file transfers, and system management via command-line interface. Both server and client can issue commands to each other.
 
