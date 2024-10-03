@@ -163,7 +163,6 @@ impl RxCommandHandler {
     }
 
     async fn execute_command(&self, command: &str) -> Response {
-        println!("{:?}", command);
         let mut parts = command.split_whitespace();
         let executable = match parts.next() {
             Some(exe) => exe,
