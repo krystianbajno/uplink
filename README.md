@@ -61,7 +61,6 @@ cargo build --release
 - **System Information**
   - `ID | WHOAMI | WHO | W` - Get current user information
   - `PWD | WHERE` - Get the current directory path
-  - `USERS` - List users on the system
   - `NETSTAT` - Display network connections
   - `N | NETWORK | IFCONFIG | IPCONFIG` - Get network adapter configuration
   - `SYSTEM | INFO | SYSTEMINFO | UNAME` - Get system configuration details

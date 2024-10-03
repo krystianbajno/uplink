@@ -7,7 +7,6 @@ pub enum Command {
     Whoami,
     Info,
     Pwd,
-    Users,
     Netstat,
     Network,
     Handshake,

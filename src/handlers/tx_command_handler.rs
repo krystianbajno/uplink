@@ -80,7 +80,6 @@ impl TxCommandHandler {
             "L" | "LIST" | "LS" | "DIR" => Some(NodeCommand::ListFiles),
             "ID" | "WHOAMI" | "WHO" | "W" => Some(NodeCommand::Whoami),
             "PWD" | "WHERE" => Some(NodeCommand::Pwd),
-            "USERS" => Some(NodeCommand::Users),
             "NETSTAT" => Some(NodeCommand::Netstat),
             "N" | "NETWORK" | "IFCONFIG" | "IPCONFIG" => Some(NodeCommand::Network),
             "SYSTEM" | "INFO" | "SYSTEMINFO" | "UNAME" => Some(NodeCommand::Info),
@@ -106,7 +105,6 @@ impl TxCommandHandler {
 
             ID | WHOAMI | WHO | W - Get current user
             PWD | WHERE - Get current directory path
-            USERS - Get users on the system
             NETSTAT - Get network connections
             N | NETWORK | IFCONFIG | IPCONFIG - Get network adapter configuration
             SYSTEM | INFO | SYSTEMINFO | UNAME - Get system configuration

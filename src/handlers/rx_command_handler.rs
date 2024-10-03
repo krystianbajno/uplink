@@ -9,7 +9,7 @@ use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
-use users::all_users;
+// use users::all_users;
 use crate::transport::communication;
 
 use crate::enums::command::Command as NodeCommand;
@@ -55,7 +55,7 @@ impl RxCommandHandler {
             NodeCommand::Info => self.execute_with_permission(|| self.info()).await,
             NodeCommand::Whoami => self.execute_with_permission(|| self.whoami()).await,
             NodeCommand::Pwd => self.execute_with_permission(|| self.pwd()).await,
-            NodeCommand::Users => self.execute_with_permission(|| self.users()).await,
+            // NodeCommand::Users => self.execute_with_permission(|| self.users()).await,
             NodeCommand::Netstat => self.execute_with_permission(|| self.netstat()).await,
             NodeCommand::Network => self.execute_with_permission(|| self.network()).await,
             NodeCommand::ListFiles => self.execute_with_transfer_permission(|| self.list_files()).await,
@@ -111,13 +111,13 @@ impl RxCommandHandler {
         Response::Message { content: username }
     }
 
-    async fn users(&self) -> Response {
-        let users = unsafe { all_users() };
-        let usernames: Vec<String> = users
-            .filter_map(|user| user.name().to_str().map(String::from))
-            .collect();
-        Response::UserList { users: usernames }
-    }
+    // async fn users(&self) -> Response {
+    //     let users = unsafe { all_users() };
+    //     let usernames: Vec<String> = users
+    //         .filter_map(|user| user.name().to_str().map(String::from))
+    //         .collect();
+    //     Response::UserList { users: usernames }
+    // }
 
     async fn netstat(&self) -> Response {
         Response::Message { content: "NOT IMPLEMENTED".to_string() }

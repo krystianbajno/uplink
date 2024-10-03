@@ -4,8 +4,10 @@ version = "0.2.1"
 edition = "2021"
 build = "build.rs"
 
+[build-dependencies]
+static_vcruntime = "2.0"
+
 [dependencies]
-users = "0.11"
 indoc = "2"
 aes-gcm = "0.10.3"
 sha2 = "0.10"
