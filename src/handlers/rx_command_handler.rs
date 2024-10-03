@@ -163,12 +163,19 @@ impl RxCommandHandler {
     }
 
     async fn execute_command(&self, command: &str) -> Response {
-        let cmd_result = if cfg!(target_os = "windows") {
-            Command::new("cmd").args(&["/C", command]).output().await
-        } else {
-            Command::new("sh").arg("-c").arg(command).output().await
+        println!("{:?}", command);
+        let mut parts = command.split_whitespace();
+        let executable = match parts.next() {
+            Some(exe) => exe,
+            None => return Response::Message { content: "Empty command".to_string() },
         };
-
+        let args: Vec<&str> = parts.collect();
+    
+        let cmd_result = Command::new(executable)
+            .args(&args)
+            .output()
+            .await;
+    
         match cmd_result {
             Ok(output) => {
                 let result = String::from_utf8_lossy(&output.stdout);
